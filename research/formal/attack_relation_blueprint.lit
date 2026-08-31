@@ -1,0 +1,32 @@
+# Research-only attack relation vocabulary.
+#
+# These predicates are deliberately not loaded by the production move gate.
+# They record one route toward moving the host-side attack scan into Litex.
+
+prop nonattacking_side(piece, attacker_side Z):
+    piece * attacker_side <= 0
+
+prop pawn_attack_miss(attacker_side, sf, sr, tf, tr Z):
+    tr != sr + attacker_side or abs(tf - sf) != 1
+
+prop knight_attack_miss(sf, sr, tf, tr Z):
+    abs(tf - sf) != 1 or abs(tr - sr) != 2
+    abs(tf - sf) != 2 or abs(tr - sr) != 1
+
+prop bishop_attack_miss(sf, sr, tf, tr Z):
+    abs(tf - sf) != abs(tr - sr) or tf = sf
+
+prop rook_attack_miss(sf, sr, tf, tr Z):
+    sf != tf or sr = tr
+    sr != tr or sf = tf
+
+prop queen_attack_miss(sf, sr, tf, tr Z):
+    abs(tf - sf) != abs(tr - sr) or tf = sf
+    sf != tf or sr = tr
+    sr != tr or sf = tf
+
+prop king_attack_miss(sf, sr, tf, tr Z):
+    abs(tf - sf) > 1 or abs(tr - sr) > 1 or tf = sf and tr = sr
+
+prop path_blocked(blocker_piece Z):
+    blocker_piece != 0

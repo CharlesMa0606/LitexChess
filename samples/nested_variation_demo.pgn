@@ -1,0 +1,9 @@
+[Event "Nested variation notation demo"]
+[Site "Litex Chess Studio"]
+[Date "2026.08.30"]
+[Round "-"]
+[White "White"]
+[Black "Black"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. d3 (4. Nc3 d6 (4... Bc5 5. O-O d6) 5. d3 Be7 6. O-O O-O) 4... Bc5 5. O-O *

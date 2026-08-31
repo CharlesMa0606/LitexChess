@@ -1,0 +1,283 @@
+# Litex Chess Studio certificate kernel.
+#
+# The runtime submits concrete integer witnesses to these predicates. Litex
+# unfolds the selected predicate with `by def` and checks every clause.
+#
+# Important boundary: Python mechanically constructs a candidate successor and
+# independently computes the expected sparse board delta, FEN metadata,
+# path-blocker counts, and king-attack counts. Litex checks the resulting concrete equalities and
+# rule clauses. The Python certificate compiler is therefore part of the
+# documented trusted computing base; it does not return the final acceptance
+# bit, but a bug in its witnesses could affect what Litex is asked to verify.
+
+
+
+# --------------------------------------------------------------------------
+# Agent-facing move record vocabulary
+# --------------------------------------------------------------------------
+# The runtime query creates only the two algebraic-square aliases used by the
+# current move (for example ``have e2 Z = 12``).  The generic square predicate
+# proves that each readable alias is exactly the corresponding board index.
+# Likewise, the query creates one local result-name alias such as
+# ``have checkmate Z = 2``.  This avoids keeping 64 global square constants in
+# the runtime kernel while preserving readable verified records.
+
+prop square(file, rank, index Z):
+    1 <= file <= 8
+    1 <= rank <= 8
+    index = (rank - 1) * 8 + (file - 1)
+
+prop move(from_square, to_square Z):
+    0 <= from_square < 64
+    0 <= to_square < 64
+    from_square != to_square
+
+prop promotion_choice(promotion Z):
+    promotion = 0 or promotion = 2 or promotion = 3 or promotion = 4 or promotion = 5
+
+# Result codes: ongoing=0, check=1, checkmate=2, stalemate=3,
+# unclassified=4. The short result predicate is the Agent-facing status record;
+# result_witness is the detailed finite evidence used by the audit certificate.
+prop result(status Z):
+    status = 0 or status = 1 or status = 2 or status = 3 or status = 4
+
+prop result_witness(status, checker_count, legal_reply_count Z):
+    status = 0 and checker_count = 0 and legal_reply_count > 0 or status = 1 and checker_count > 0 and legal_reply_count > 0 or status = 2 and checker_count > 0 and legal_reply_count = 0 or status = 3 and checker_count = 0 and legal_reply_count = 0 or status = 4 and checker_count = -1 and legal_reply_count = -1
+
+prop coordinate(file, rank Z):
+    1 <= file <= 8
+    1 <= rank <= 8
+
+prop piece_code(piece Z):
+    -6 <= piece <= 6
+
+prop side_code(side Z):
+    side = 1 or side = -1
+
+prop moving_piece(source, side Z):
+    side = 1 or side = -1
+    source * side > 0
+    1 <= abs(source) <= 6
+
+prop path_clear(path_blockers Z):
+    path_blockers = 0
+
+# Piece geometry and special-move predicates.
+prop pawn_single_move(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target = 0
+    promotion = 0
+    tf = sf
+    tr = sr + side
+    side = 1 and tr <= 7 or side = -1 and tr >= 2
+
+prop pawn_double_move(source, target, middle, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target = 0
+    middle = 0
+    promotion = 0
+    tf = sf
+    side = 1 and sr = 2 and tr = 4 or side = -1 and sr = 7 and tr = 5
+
+prop pawn_capture(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target * side < 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = 1
+    tr = sr + side
+    side = 1 and tr <= 7 or side = -1 and tr >= 2
+
+prop pawn_promotion(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    promotion = 2 or promotion = 3 or promotion = 4 or promotion = 5
+    tr = sr + side
+    side = 1 and tr = 8 or side = -1 and tr = 1
+    target = 0 and tf = sf or target * side < 0 and abs(target) != 6 and abs(tf - sf) = 1
+
+prop en_passant_move(source, target, captured, side, sf, sr, tf, tr, ep_file, ep_rank, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target = 0
+    captured = -side
+    promotion = 0
+    abs(tf - sf) = 1
+    tr = sr + side
+    tf = ep_file
+    tr = ep_rank
+
+prop knight_move(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = 2 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = 1 and abs(tr - sr) = 2 or abs(tf - sf) = 2 and abs(tr - sr) = 1
+
+prop bishop_move(source, target, side, sf, sr, tf, tr, path_blockers, promotion Z):
+    side = 1 or side = -1
+    source = 3 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = abs(tr - sr)
+    tf != sf
+    path_blockers = 0
+
+prop rook_move(source, target, side, sf, sr, tf, tr, path_blockers, promotion Z):
+    side = 1 or side = -1
+    source = 4 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    sf = tf and sr != tr or sr = tr and sf != tf
+    path_blockers = 0
+
+prop queen_move(source, target, side, sf, sr, tf, tr, path_blockers, promotion Z):
+    side = 1 or side = -1
+    source = 5 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = abs(tr - sr) and tf != sf or sf = tf and sr != tr or sr = tr and sf != tf
+    path_blockers = 0
+
+prop king_step(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = 6 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) <= 1
+    abs(tr - sr) <= 1
+    abs(tf - sf) + abs(tr - sr) > 0
+
+prop white_kingside_castle(source, f1_piece, g1_piece, h1_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = 6
+    f1_piece = 0
+    g1_piece = 0
+    h1_piece = 4
+    right = 1
+    sf = 5
+    sr = 1
+    tf = 7
+    tr = 1
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+prop white_queenside_castle(source, b1_piece, c1_piece, d1_piece, a1_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = 6
+    b1_piece = 0
+    c1_piece = 0
+    d1_piece = 0
+    a1_piece = 4
+    right = 1
+    sf = 5
+    sr = 1
+    tf = 3
+    tr = 1
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+prop black_kingside_castle(source, f8_piece, g8_piece, h8_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = -6
+    f8_piece = 0
+    g8_piece = 0
+    h8_piece = -4
+    right = 1
+    sf = 5
+    sr = 8
+    tf = 7
+    tr = 8
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+prop black_queenside_castle(source, b8_piece, c8_piece, d8_piece, a8_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = -6
+    b8_piece = 0
+    c8_piece = 0
+    d8_piece = 0
+    a8_piece = -4
+    right = 1
+    sf = 5
+    sr = 8
+    tf = 3
+    tr = 8
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+# The concrete runtime currently computes attacking pieces in the Python
+# certificate compiler and submits only the aggregate count below.  More
+# abstract attack-relation experiments live under research/formal/ and are not
+# part of the production rule kernel.
+
+prop king_safe(king_count, unsafe_attacker_count Z):
+    king_count = 1
+    unsafe_attacker_count = 0
+
+prop admissible_position(white_king_count, black_king_count, last_rank_pawn_count, side Z):
+    white_king_count = 1
+    black_king_count = 1
+    last_rank_pawn_count = 0
+    side = 1 or side = -1
+
+prop metadata_transition(actual_turn, expected_turn, actual_wk, expected_wk, actual_wq, expected_wq, actual_bk, expected_bk, actual_bq, expected_bq, actual_ep_file, expected_ep_file, actual_ep_rank, expected_ep_rank, actual_halfmove, expected_halfmove, actual_fullmove, expected_fullmove Z):
+    actual_turn = expected_turn
+    actual_wk = expected_wk
+    actual_wq = expected_wq
+    actual_bk = expected_bk
+    actual_bq = expected_bq
+    actual_ep_file = expected_ep_file
+    actual_ep_rank = expected_ep_rank
+    actual_halfmove = expected_halfmove
+    actual_fullmove = expected_fullmove
+
+prop legal_transition(shape_certificate_count, metadata_mismatch_count, unsafe_attacker_count, pre_white_king_count, pre_black_king_count, post_white_king_count, post_black_king_count, pre_last_rank_pawn_count, post_last_rank_pawn_count Z):
+    shape_certificate_count = 1
+    metadata_mismatch_count = 0
+    unsafe_attacker_count = 0
+    pre_white_king_count = 1
+    pre_black_king_count = 1
+    post_white_king_count = 1
+    post_black_king_count = 1
+    pre_last_rank_pawn_count = 0
+    post_last_rank_pawn_count = 0
+
+
+# --------------------------------------------------------------------------
+# Exact sparse board transition (only production board contract)
+# --------------------------------------------------------------------------
+# A legal chess move changes only 2, 3 or 4 cells.  The visible board remains
+# a 64-cell object, but its transition is represented by local edits and an
+# injective base-16 integer code.  Each piece code p in [-6,6] is stored as
+# digit p+6 in [0,12].  This is an exact encoding, not a hash.
+
+prop sparse_square_edit(index, before_piece, after_piece, weight, contribution Z):
+    0 <= index
+    index < 64
+    -6 <= before_piece
+    before_piece <= 6
+    -6 <= after_piece
+    after_piece <= 6
+    weight = 16^index
+    contribution = (after_piece - before_piece) * weight
+
+prop sparse_board_transition(before_code, after_code, contribution1, contribution2, contribution3, contribution4, edit_count, duplicate_count, before_mismatch_count, after_mismatch_count Z):
+    2 <= edit_count
+    edit_count <= 4
+    duplicate_count = 0
+    before_mismatch_count = 0
+    after_mismatch_count = 0
+    after_code = before_code + contribution1 + contribution2 + contribution3 + contribution4

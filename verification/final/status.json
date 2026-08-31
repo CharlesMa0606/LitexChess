@@ -1,0 +1,366 @@
+{
+  "generated_at": "2026-08-31T17:23:53.584350+00:00",
+  "overall": "PASS",
+  "litex_executable": "/mnt/data/LitexChessStudio_v0.8_finalwork_9f4c/LitexChessStudio_v0.8/tools/litex/linux-amd64/litex",
+  "checks": [
+    {
+      "name": "textbook_sync",
+      "title": "教材镜像与核心规则同步",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 3.354636,
+      "timeout": 60,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/sync_textbook_core.py",
+        "--check"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/textbook_sync.log"
+    },
+    {
+      "name": "python_compile",
+      "title": "Python 源码编译",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 2.347567,
+      "timeout": 120,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "compileall",
+        "-q",
+        "backend",
+        "scripts",
+        "tests"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/python_compile.log"
+    },
+    {
+      "name": "python_tests",
+      "title": "完整 Python 测试",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 4.255284,
+      "timeout": 300,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "backend/tests",
+        "tests"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/python_tests.log"
+    },
+    {
+      "name": "frontend_contract",
+      "title": "工作台与十五章教材静态契约",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 2.297632,
+      "timeout": 120,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/verify_frontend_contract.py"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/frontend_contract.log"
+    },
+    {
+      "name": "semantic_gate",
+      "title": "v0.8 语义门禁",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 3.446558,
+      "timeout": 180,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/verify_v08_semantics.py"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/semantic_gate.log"
+    },
+    {
+      "name": "api_smoke",
+      "title": "工作台、教材、PGN 与终局 API 烟雾测试",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 11.533691,
+      "timeout": 300,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/api_smoke.py"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/api_smoke.log"
+    },
+    {
+      "name": "textbook_examples",
+      "title": "全部固定教材例与局面实验",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 15.100977,
+      "timeout": 600,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "scripts/verify_textbook.py"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/textbook_examples.log"
+    },
+    {
+      "name": "js_app",
+      "title": "frontend/app.js 语法",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.184836,
+      "timeout": 60,
+      "command": [
+        "/opt/nvm/versions/node/v22.16.0/bin/node",
+        "--check",
+        "frontend/app.js"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/js_app.log"
+    },
+    {
+      "name": "js_notation",
+      "title": "frontend/notation.js 语法",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.335286,
+      "timeout": 60,
+      "command": [
+        "/opt/nvm/versions/node/v22.16.0/bin/node",
+        "--check",
+        "frontend/notation.js"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/js_notation.log"
+    },
+    {
+      "name": "js_textbook",
+      "title": "frontend/textbook.js 语法",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.182931,
+      "timeout": 60,
+      "command": [
+        "/opt/nvm/versions/node/v22.16.0/bin/node",
+        "--check",
+        "frontend/textbook.js"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/js_textbook.log"
+    },
+    {
+      "name": "notation_model",
+      "title": "棋谱主变与括号变例模型",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.333563,
+      "timeout": 60,
+      "command": [
+        "/opt/nvm/versions/node/v22.16.0/bin/node",
+        "scripts/verify_notation.js"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/notation_model.log"
+    },
+    {
+      "name": "litex_version",
+      "title": "Litex 版本",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.02054,
+      "timeout": 60,
+      "command": [
+        "/mnt/data/LitexChessStudio_v0.8_finalwork_9f4c/LitexChessStudio_v0.8/tools/litex/linux-amd64/litex",
+        "-version"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/litex_version.log"
+    },
+    {
+      "name": "litex_kernel",
+      "title": "生产规则内核编译",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.331865,
+      "timeout": 180,
+      "command": [
+        "/mnt/data/LitexChessStudio_v0.8_finalwork_9f4c/LitexChessStudio_v0.8/tools/litex/linux-amd64/litex",
+        "-compact",
+        "-runner",
+        "-f",
+        "formal/chess_rules.lit"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/litex_kernel.log"
+    },
+    {
+      "name": "litex_textbook",
+      "title": "中文教材 Litex 编译",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.469375,
+      "timeout": 180,
+      "command": [
+        "/mnt/data/LitexChessStudio_v0.8_finalwork_9f4c/LitexChessStudio_v0.8/tools/litex/linux-amd64/litex",
+        "-compact",
+        "-runner",
+        "-f",
+        "textbook/chess_rules_textbook_cn.lit"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/litex_textbook.log"
+    },
+    {
+      "name": "litex_research_contract",
+      "title": "研究性证书契约编译",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.048933,
+      "timeout": 120,
+      "command": [
+        "/mnt/data/LitexChessStudio_v0.8_finalwork_9f4c/LitexChessStudio_v0.8/tools/litex/linux-amd64/litex",
+        "-compact",
+        "-runner",
+        "-f",
+        "research/formal/certificate_contract.lit"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/litex_research_contract.log"
+    },
+    {
+      "name": "litex_research_blueprint",
+      "title": "研究性全状态蓝图编译",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 0.080857,
+      "timeout": 120,
+      "command": [
+        "/mnt/data/LitexChessStudio_v0.8_finalwork_9f4c/LitexChessStudio_v0.8/tools/litex/linux-amd64/litex",
+        "-compact",
+        "-runner",
+        "-f",
+        "research/formal/chess_specification_full.lit"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/litex_research_blueprint.log"
+    },
+    {
+      "name": "legal_e2e4",
+      "title": "合法 e2e4",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 1.989917,
+      "timeout": 120,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "litex_chess.cli",
+        "verify-move",
+        "e2e4"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/legal_e2e4.log"
+    },
+    {
+      "name": "fools_mate_qh4",
+      "title": "愚人将杀 Qh4#",
+      "required": true,
+      "status": "PASS",
+      "returncode": 0,
+      "seconds": 2.090059,
+      "timeout": 120,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "litex_chess.cli",
+        "verify-move",
+        "d8h4",
+        "--fen",
+        "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq g3 0 2"
+      ],
+      "expected": [
+        0
+      ],
+      "log": "verification/generated/fools_mate_qh4.log"
+    },
+    {
+      "name": "illegal_e2e5",
+      "title": "非法 e2e5 必须拒绝",
+      "required": true,
+      "status": "PASS",
+      "returncode": 2,
+      "seconds": 2.138167,
+      "timeout": 120,
+      "command": [
+        "/opt/pyvenv/bin/python",
+        "-m",
+        "litex_chess.cli",
+        "verify-move",
+        "e2e5"
+      ],
+      "expected": [
+        2
+      ],
+      "log": "verification/generated/illegal_e2e5.log"
+    }
+  ]
+}

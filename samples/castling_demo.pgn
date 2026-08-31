@@ -1,0 +1,11 @@
+[Event "Castling gate demo"]
+[Site "Local"]
+[Date "2026.08.29"]
+[Round "-"]
+[White "White"]
+[Black "Black"]
+[Result "*"]
+[SetUp "1"]
+[FEN "4k3/8/8/8/8/8/8/4K2R w K - 0 1"]
+
+1. O-O *

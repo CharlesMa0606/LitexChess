@@ -1,0 +1,11 @@
+[Event "En-passant gate demo"]
+[Site "Local"]
+[Date "2026.08.29"]
+[Round "-"]
+[White "White"]
+[Black "Black"]
+[Result "*"]
+[SetUp "1"]
+[FEN "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1"]
+
+1. exd6 *

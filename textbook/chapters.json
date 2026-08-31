@@ -1,0 +1,2273 @@
+{
+  "title": "Litex 国际象棋规则教材",
+  "subtitle": "从 move(e2,e4)、result(checkmate) 到稀疏证书和互动残局训练",
+  "source": "textbook/chess_rules_textbook_cn.lit",
+  "core_source": "formal/chess_rules.lit",
+  "source_modules": [
+    {
+      "slug": "encoding",
+      "title": "编码与局面"
+    },
+    {
+      "slug": "lifecycle",
+      "title": "候选与棋盘后继"
+    },
+    {
+      "slug": "pawn",
+      "title": "兵"
+    },
+    {
+      "slug": "pieces",
+      "title": "普通棋子"
+    },
+    {
+      "slug": "castling",
+      "title": "易位"
+    },
+    {
+      "slug": "safety",
+      "title": "王安全"
+    },
+    {
+      "slug": "metadata",
+      "title": "元数据"
+    },
+    {
+      "slug": "contract",
+      "title": "总合同"
+    },
+    {
+      "slug": "examples",
+      "title": "定义级例子"
+    }
+  ],
+  "principles": [
+    "运行时内核只有 formal/chess_rules.lit；教材镜像由脚本从单一事实源生成。",
+    "工作台显示的 move(...)、result(...) 与详细证书属于同一次 Litex 事务。",
+    "棋盘后继使用 2—4 个规范稀疏编辑和精确全盘码，不在生产查询中复述 64 个格子。",
+    "每个已提交着法都经过 fail-closed Litex 门禁；状态集合与训练启发式的宿主计算边界被明确公开。"
+  ],
+  "chapters": [
+    {
+      "slug": "position-state",
+      "number": 1,
+      "part": "I",
+      "part_title": "第一编　局面、状态与可读执行链",
+      "title": "完整局面：棋盘、轮次、权利与 FEN",
+      "summary": "先建立正确对象：国际象棋局面不是一张静态图片，而是棋子摆放与历史相关字段组成的完整 Position。",
+      "goals": [
+        "能从 FEN 的六个字段还原局面含义。",
+        "理解易位权、过路兵目标无法仅由棋子摆放恢复。",
+        "区分内部整数编码、Position 与 FEN 序列化。"
+      ],
+      "engine_note": "运行时先把 FEN 解析为 Position；Litex 接收的是从具体 Position 编译出的整数事实，而不是让 FEN 自己判断规则。",
+      "lesson": [
+        {
+          "title": "从棋盘图片升级到局面对象",
+          "paragraphs": [
+            "相同的 64 格摆放可以对应不同的合法走法集合。王或角车是否曾经移动、上一手是否刚完成兵双步，都会改变当前权利。",
+            "因此引擎保存 board、turn、castling、ep_square、halfmove、fullmove，而不是每一步只重新看棋子在哪里。"
+          ]
+        },
+        {
+          "title": "FEN 是序列化，不是另一个棋规引擎",
+          "paragraphs": [
+            "每次候选状态更新完成后，Position.fen 把六个字段写成文本。FEN 负责记录，不负责证明这一手合法。",
+            "教材中的走前、候选 after、期望 after 三份 FEN 可以帮助逐项审计状态演化。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "encoding",
+        "metadata"
+      ],
+      "board_labs": [
+        {
+          "id": "fen-state-e2e4",
+          "title": "从初始局面观察 FEN 六字段",
+          "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "只操作 e2 白兵。先比较 e2-e3 与 e2-e4，再观察 ep 字段为什么只有双步会变成 e3。",
+          "concepts": [
+            "FEN 六字段",
+            "候选后继",
+            "ep 目标"
+          ],
+          "marks": [
+            {
+              "square": "e2",
+              "kind": "source",
+              "label": "唯一可操作棋子"
+            },
+            {
+              "square": "e3",
+              "kind": "path",
+              "label": "双步经过格"
+            },
+            {
+              "square": "e4",
+              "kind": "target",
+              "label": "双步目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "single",
+              "uci": "e2e3",
+              "expected": true,
+              "label": "e2-e3：普通单步",
+              "teaching": "棋盘改变 e2/e3；轮到黑方；易位权不变；ep 仍为 -；半回合计数归零。"
+            },
+            {
+              "id": "double",
+              "uci": "e2e4",
+              "expected": true,
+              "label": "e2-e4：初始双步",
+              "teaching": "除了 e2/e4 外，还会把过路兵目标设为经过格 e3。"
+            },
+            {
+              "id": "triple",
+              "uci": "e2e5",
+              "expected": false,
+              "label": "e2-e5：故意三步",
+              "teaching": "机械候选仍能被构造并产生 FEN，但 pawn_single_move 的几何证书失败，最终不提交。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "encoding-valid-coordinate",
+          "title": "合法坐标：e4",
+          "query": "by def $coordinate(5, 4)",
+          "expected": true,
+          "explanation": "e 文件映射为 5，第四横线为 4。"
+        },
+        {
+          "id": "encoding-invalid-file",
+          "title": "故意反例：第 9 条纵线",
+          "query": "by def $coordinate(9, 4)",
+          "expected": false,
+          "explanation": "file=9 超出 1..8。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "move-pipeline",
+      "number": 2,
+      "part": "I",
+      "part_title": "第一编　局面、状态与可读执行链",
+      "title": "一手棋的可读记录、完整证书与稀疏后继",
+      "summary": "从 Agent 可读的 move(e2,e4) 与 result(...) 出发，再展开机械候选、稀疏棋盘编辑、元数据、王安全和最终提交。",
+      "goals": [
+        "理解 Agent 记录与完整证明义务属于同一次 Litex 事务。",
+        "说清 candidate.py、query.py、Litex 与棋谱树各自负责什么。",
+        "解释为什么 2—4 个稀疏编辑加精确全盘码足以替代生产环境中的 全盘冗余逐项比较。"
+      ],
+      "engine_note": "工作台 v0.8.0 把同一份真实查询拆成“Agent 走法记录”“完整 Litex 证书”“固定规则内核”三个只读视图；任何详细证书失败都会使前面的 move/result 记录一并回滚。",
+      "lesson": [
+        {
+          "title": "先读接近正常走子的封面",
+          "paragraphs": [
+            "每手查询先建立本次用到的格名别名，再检查 by def $move(e2, e4) 与 by def $result(ongoing/check/checkmate/stalemate)。result_witness 继续记录将军者数量与合法应对数。"
+          ],
+          "points": [
+            "可读封面是真实 Litex 查询的一部分，不是前端伪代码。",
+            "它只概括结果；合法性的充分细节仍由后续证书承担。"
+          ]
+        },
+        {
+          "title": "候选构造、证书核验与提交必须分开",
+          "paragraphs": [
+            "前端提交 from/to/promotion；candidate.py 机械构造候选 Position；query.py 从规则参数生成 Litex 义务；只有全部语句成功，应用层才把候选加入棋谱树。"
+          ],
+          "points": [
+            "构造候选不代表承认合法。",
+            "失败、超时、unknown 或解析异常全部拒绝并保持原局面。"
+          ]
+        },
+        {
+          "title": "棋盘后继只陈述真正变化的格子",
+          "paragraphs": [
+            "普通着改变两格，吃过路兵改变三格，易位改变四格。每个编辑给出 (after-before)×16^index 的贡献；精确、可逆的全盘码等式排除任何未登记改动。"
+          ],
+          "points": [
+            "这不是概率哈希。",
+            "未列入编辑集合的格子由不可变棋盘应用语义保持不变。",
+            "旧的逐格比较只适合作为迁移期差分审计，不再属于生产内核。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "lifecycle",
+        "contract"
+      ],
+      "board_labs": [
+        {
+          "id": "lifecycle-e2e4",
+          "title": "同一手 e2-e4 的完整五阶段追踪",
+          "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "点击 e4 后，不只看“接受”，而要展开候选操作、FEN 字段、稀疏编辑与精确全盘码和总合同。",
+          "concepts": [
+            "五阶段",
+            "Agent 记录",
+            "稀疏后继",
+            "提交/回滚"
+          ],
+          "marks": [
+            {
+              "square": "e3",
+              "kind": "path",
+              "label": "中间格"
+            },
+            {
+              "square": "e4",
+              "kind": "target",
+              "label": "合法目标"
+            },
+            {
+              "square": "e5",
+              "kind": "danger",
+              "label": "非法三步目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "double",
+              "uci": "e2e4",
+              "expected": true,
+              "label": "运行完整 e2-e4",
+              "teaching": "只登记 e2 与 e4 两个编辑；精确全盘码等式保证其余格子没有被暗改。"
+            },
+            {
+              "id": "triple",
+              "uci": "e2e5",
+              "expected": false,
+              "label": "对比非法 e2-e5",
+              "teaching": "即使稀疏后继本身与机械候选一致，兵三步仍会在 pawn_double_move/pawn_single_move 的形状层被拒绝。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "lifecycle-valid-sparse-edit",
+          "title": "稀疏编辑正例：a1 白车离开",
+          "query": "by def $sparse_square_edit(0, 4, 0, 1, -4)",
+          "expected": true,
+          "explanation": "index=0 的位权为 1，棋子 4→0 的贡献恰为 -4。"
+        },
+        {
+          "id": "lifecycle-invalid-sparse-edit",
+          "title": "稀疏编辑反例：贡献写错",
+          "query": "by def $sparse_square_edit(0, 4, 0, 1, -3)",
+          "expected": false,
+          "explanation": "同一编辑的精确贡献必须为 -4，而不是 -3。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "sliding-pieces",
+      "number": 3,
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "title": "车、象与后：射线、阻挡和目标占用",
+      "summary": "滑行棋子的规则由几何方向、路径清空和目标归属共同组成；不能只看起点终点形状。",
+      "goals": [
+        "计算车线、象线与后复合几何。",
+        "区分中间阻挡与目标格己方棋子。",
+        "从路径列表定位第一枚阻挡子。"
+      ],
+      "engine_note": "Python 枚举严格中间格并给出 blocker_count；Litex 检查对应的 bishop_move、rook_move 或 queen_move 以及 path_clear。",
+      "lesson": [
+        {
+          "title": "路径只包含严格位于起终点之间的格子",
+          "paragraphs": [
+            "目标格是否可落由目标占用规则处理，中间格是否全空由 path_clear 处理。两者不能混为一谈。"
+          ]
+        },
+        {
+          "title": "后不是任意长距离棋子",
+          "paragraphs": [
+            "后的允许几何是车线或象线的并集。坐标差 (1,2) 即使路径看起来短，也不是后步。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "pieces"
+      ],
+      "board_labs": [
+        {
+          "id": "bishop-blocker",
+          "title": "白象 c1：一枚 d2 白兵如何截断整条射线",
+          "fen": "4k3/8/8/8/8/8/3P4/2B1K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "c1",
+          "instruction": "只操作 c1 白象。b2、a3 在另一条对角线上开放；d2 阻挡通往 h6 的方向。",
+          "concepts": [
+            "滑行路径",
+            "目标占用"
+          ],
+          "marks": [
+            {
+              "square": "d2",
+              "kind": "blocker",
+              "label": "第一阻挡格"
+            },
+            {
+              "square": "e3",
+              "kind": "path",
+              "label": "被截断路径"
+            },
+            {
+              "square": "f4",
+              "kind": "path",
+              "label": "被截断路径"
+            },
+            {
+              "square": "g5",
+              "kind": "path",
+              "label": "被截断路径"
+            }
+          ],
+          "moves": [
+            {
+              "id": "b2",
+              "uci": "c1b2",
+              "expected": true,
+              "label": "c1-b2：开放的一步对角线",
+              "teaching": "中间没有格，目标为空。"
+            },
+            {
+              "id": "a3",
+              "uci": "c1a3",
+              "expected": true,
+              "label": "c1-a3：开放对角线",
+              "teaching": "路径 b2 为空。"
+            },
+            {
+              "id": "d2",
+              "uci": "c1d2",
+              "expected": false,
+              "label": "c1-d2：目标是己方兵",
+              "teaching": "不是路径问题，而是目标格属于己方。"
+            },
+            {
+              "id": "h6",
+              "uci": "c1h6",
+              "expected": false,
+              "label": "c1-h6：射线被 d2 阻挡",
+              "teaching": "路径阻挡数为 1。"
+            }
+          ]
+        },
+        {
+          "id": "rook-blocker-and-own-piece",
+          "title": "车不能穿过己方兵，也不能落在己方棋子上",
+          "fen": "4k3/8/8/8/8/8/P7/R3K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "a1",
+          "instruction": "只操作 a1 白车。先比较落在 a2、越过 a2 到 a3、横向到 b1 三种候选。",
+          "concepts": [
+            "车的射线",
+            "路径阻挡",
+            "己方目标格"
+          ],
+          "marks": [
+            {
+              "square": "a1",
+              "kind": "source",
+              "label": "白车"
+            },
+            {
+              "square": "a2",
+              "kind": "blocker",
+              "label": "己方兵：既阻挡又不能被吃"
+            },
+            {
+              "square": "a3",
+              "kind": "danger",
+              "label": "隔着 a2 的目标"
+            },
+            {
+              "square": "b1",
+              "kind": "safe",
+              "label": "无阻挡横向目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "own-target",
+              "uci": "a1a2",
+              "expected": false,
+              "label": "Ra2?：目标是己方兵",
+              "teaching": "几何方向正确，但 target_friend 使形状证书失败。"
+            },
+            {
+              "id": "jump-blocker",
+              "uci": "a1a3",
+              "expected": false,
+              "label": "Ra3?：试图越过 a2",
+              "teaching": "路径包含 a2，path_clear(1) 被拒绝。"
+            },
+            {
+              "id": "horizontal",
+              "uci": "a1b1",
+              "expected": true,
+              "label": "Rb1：横向一步",
+              "teaching": "同横线、路径为空、目标为空，完整门禁接受。"
+            }
+          ]
+        },
+        {
+          "id": "queen-two-geometries",
+          "title": "后复用车线与象线，但不能走成任意折线",
+          "fen": "4k3/8/8/8/3Q4/8/8/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "d4",
+          "instruction": "只操作 d4 白后。比较同纵线、对角线和不属于两者的目标。",
+          "concepts": [
+            "后的几何",
+            "车线或象线",
+            "非法斜率"
+          ],
+          "marks": [
+            {
+              "square": "d7",
+              "kind": "safe",
+              "label": "车式纵线"
+            },
+            {
+              "square": "g7",
+              "kind": "safe",
+              "label": "象式对角线"
+            },
+            {
+              "square": "e6",
+              "kind": "danger",
+              "label": "既非直线也非对角线"
+            }
+          ],
+          "moves": [
+            {
+              "id": "rook-like",
+              "uci": "d4d7",
+              "expected": true,
+              "label": "Qd7：车式走法",
+              "teaching": "df=0，路径 d5、d6 均为空。"
+            },
+            {
+              "id": "bishop-like",
+              "uci": "d4g7",
+              "expected": true,
+              "label": "Qg7：象式走法",
+              "teaching": "|df|=|dr|，路径 e5、f6 均为空。"
+            },
+            {
+              "id": "bad-slope",
+              "uci": "d4e6",
+              "expected": false,
+              "label": "Qe6?：错误斜率",
+              "teaching": "坐标差 (1,2) 不是后允许的几何。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "pieces-invalid-blocked-bishop",
+          "title": "定义级反例：象路径阻挡数为 1",
+          "query": "by def $bishop_move(3, 0, 1, 3, 1, 7, 5, 1, 0)",
+          "expected": false,
+          "explanation": "对角线成立，但 path_blockers=1。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "knight-king",
+      "number": 4,
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "title": "马与王：跳跃、相邻格与受攻击目标",
+      "summary": "马没有滑行路径；王虽然只走一格，却必须额外满足走后目标不受攻击。",
+      "goals": [
+        "用坐标差描述马步。",
+        "理解‘马可越子’不等于‘可落在己方棋子上’。",
+        "把王的一步几何与王安全证书分开。"
+      ],
+      "engine_note": "攻击扫描目前由 Python 计算攻击者列表，再由 Litex 对给定的唯一王计数与零攻击者汇总做 fail-closed 核验。",
+      "lesson": [
+        {
+          "title": "马只看起点、终点和目标归属",
+          "paragraphs": [
+            "马的中间不存在经过格，因此周围棋子不会阻挡它；但目标格若有己方棋子仍然非法。"
+          ]
+        },
+        {
+          "title": "王步是局部几何加全局攻击关系",
+          "paragraphs": [
+            "king_step 只说明坐标相邻。是否走入车、象、后、马、兵或敌王的攻击范围，由走后王安全阶段拒绝。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "pieces",
+        "safety"
+      ],
+      "board_labs": [
+        {
+          "id": "knight-jump",
+          "title": "白马 b1：可以越过包围，但不能落在己方兵上",
+          "fen": "4k3/8/8/8/8/8/PPPP4/1N2K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "b1",
+          "instruction": "a2-b2-c2-d2 都有白兵。只操作 b1 白马。",
+          "concepts": [
+            "马越子",
+            "目标格约束"
+          ],
+          "marks": [
+            {
+              "square": "a2",
+              "kind": "blocker",
+              "label": "不影响跳跃"
+            },
+            {
+              "square": "b2",
+              "kind": "blocker",
+              "label": "不影响跳跃"
+            },
+            {
+              "square": "c2",
+              "kind": "blocker",
+              "label": "不影响跳跃"
+            },
+            {
+              "square": "d2",
+              "kind": "own-target",
+              "label": "不能落在己方兵上"
+            }
+          ],
+          "moves": [
+            {
+              "id": "a3",
+              "uci": "b1a3",
+              "expected": true,
+              "label": "b1-a3：越过棋子",
+              "teaching": "马不检查中间路径。"
+            },
+            {
+              "id": "c3",
+              "uci": "b1c3",
+              "expected": true,
+              "label": "b1-c3：越过棋子",
+              "teaching": "同样只看坐标差。"
+            },
+            {
+              "id": "d2",
+              "uci": "b1d2",
+              "expected": false,
+              "label": "b1-d2：目标有己方兵",
+              "teaching": "几何正确，但目标占用条件失败。"
+            }
+          ]
+        },
+        {
+          "id": "king-into-check",
+          "title": "白王不能走入 e 文件攻击线",
+          "fen": "4r1k1/8/8/8/8/8/8/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e1",
+          "instruction": "黑车 e8 控制 e 文件。只操作 e1 白王。",
+          "concepts": [
+            "王走入将军",
+            "全局安全"
+          ],
+          "marks": [
+            {
+              "square": "e8",
+              "kind": "attacker",
+              "label": "黑车"
+            },
+            {
+              "square": "e2",
+              "kind": "attacked",
+              "label": "受攻击目标"
+            },
+            {
+              "square": "d1",
+              "kind": "safe",
+              "label": "安全目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "e2",
+              "uci": "e1e2",
+              "expected": false,
+              "label": "e1-e2：仍在黑车射线上",
+              "teaching": "king_step 几何成立，但走后有一个攻击者。"
+            },
+            {
+              "id": "d1",
+              "uci": "e1d1",
+              "expected": true,
+              "label": "e1-d1：离开攻击线",
+              "teaching": "目标不受黑车攻击。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "pieces-valid-knight",
+          "title": "定义级正例：g1-f3",
+          "query": "by def $knight_move(2, 0, 1, 7, 1, 6, 3, 0)",
+          "expected": true,
+          "explanation": "坐标差为 (1,2)。"
+        },
+        {
+          "id": "safety-invalid-attacker",
+          "title": "定义级反例：一个攻击者",
+          "query": "by def $king_safe(1, 1)",
+          "expected": false,
+          "explanation": "unsafe_attacker_count 必须为 0。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "ordinary-pawns",
+      "number": 5,
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "title": "兵的方向、双步、斜吃与阻挡",
+      "summary": "兵把移动与吃子分成不同几何：直走必须空，斜走必须有可吃目标；双步还要求初始横线和中间格为空。",
+      "goals": [
+        "区分兵单步、双步和普通吃子。",
+        "理解兵不能横走，也不能直向吃子。",
+        "解释为什么双步同时检查中间格与目标格。"
+      ],
+      "engine_note": "形状选择器根据源棋子、坐标差、目标占用和升变参数选定具体兵谓词；最终仍要连同王安全与完整状态一起验证。",
+      "lesson": [
+        {
+          "title": "方向由 side 决定",
+          "paragraphs": [
+            "白兵 rank 增加，黑兵 rank 减少。形式化定义不靠中文方向词，而是把 side=±1 代入坐标等式。"
+          ]
+        },
+        {
+          "title": "双步不是把单步乘二",
+          "paragraphs": [
+            "它只在起始横线可用，并且经过格、目标格都必须为空；中间有棋子时，单步和双步都会失败。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "pawn"
+      ],
+      "board_labs": [
+        {
+          "id": "pawn-blocked-double",
+          "title": "中间格阻挡：白兵没有任何直进空间",
+          "fen": "4k3/8/8/8/8/4N3/4P3/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "e3 上有白马。只操作 e2 白兵，尝试单步和双步。",
+          "concepts": [
+            "目标占用",
+            "中间格阻挡"
+          ],
+          "marks": [
+            {
+              "square": "e3",
+              "kind": "blocker",
+              "label": "阻挡棋子"
+            },
+            {
+              "square": "e4",
+              "kind": "target",
+              "label": "看似目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "single",
+              "uci": "e2e3",
+              "expected": false,
+              "label": "e2-e3：目标被己方马占据",
+              "teaching": "目标不是空格；形状选择会落到不满足条件的分支并被拒绝。"
+            },
+            {
+              "id": "double",
+              "uci": "e2e4",
+              "expected": false,
+              "label": "e2-e4：中间格被阻挡",
+              "teaching": "path_clear 与 pawn_double_move 的 middle=0 都不能通过。"
+            }
+          ]
+        },
+        {
+          "id": "pawn-capture-lab",
+          "title": "直进与斜吃：同一枚 e5 白兵的四个选择",
+          "fen": "4k3/8/3p1p2/4P3/8/8/8/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e5",
+          "instruction": "d6、f6 有黑兵，e6 为空。比较直进、两侧吃子与横走。",
+          "concepts": [
+            "直进",
+            "斜吃"
+          ],
+          "marks": [
+            {
+              "square": "d6",
+              "kind": "capture",
+              "label": "可吃"
+            },
+            {
+              "square": "e6",
+              "kind": "target",
+              "label": "可直进"
+            },
+            {
+              "square": "f6",
+              "kind": "capture",
+              "label": "可吃"
+            },
+            {
+              "square": "d5",
+              "kind": "danger",
+              "label": "横走非法"
+            }
+          ],
+          "moves": [
+            {
+              "id": "forward",
+              "uci": "e5e6",
+              "expected": true,
+              "label": "e5-e6：直进空格",
+              "teaching": "目标为空且同纵线前进一步。"
+            },
+            {
+              "id": "capture-left",
+              "uci": "e5d6",
+              "expected": true,
+              "label": "e5xd6：斜吃左侧黑兵",
+              "teaching": "目标是敌兵且斜向前一格。"
+            },
+            {
+              "id": "capture-right",
+              "uci": "e5f6",
+              "expected": true,
+              "label": "e5xf6：斜吃右侧黑兵",
+              "teaching": "与左侧同理。"
+            },
+            {
+              "id": "sideways",
+              "uci": "e5d5",
+              "expected": false,
+              "label": "e5-d5：横走",
+              "teaching": "即使目标为空，兵也不能横走。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "pawn-valid-double",
+          "title": "定义级正例：e2-e4",
+          "query": "by def $pawn_double_move(1, 0, 0, 1, 5, 2, 5, 4, 0)",
+          "expected": true,
+          "explanation": "目标和中间格均为空。"
+        },
+        {
+          "id": "pawn-invalid-blocked-double",
+          "title": "定义级反例：中间格非空",
+          "query": "by def $pawn_double_move(1, 0, 2, 1, 5, 2, 5, 4, 0)",
+          "expected": false,
+          "explanation": "middle=2 不等于 0。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "special-moves",
+      "number": 6,
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "title": "升变、吃过路兵与王车易位",
+      "summary": "三类特殊走法都依赖普通棋子摆放之外的信息，必须观察棋盘变换和历史字段如何同步更新。",
+      "goals": [
+        "理解升变替换、吃过路兵的非目标格吃子。",
+        "知道过路兵权只存在一手。",
+        "完整列出易位的权利、空格、受攻击格和双棋子移动条件。"
+      ],
+      "engine_note": "候选构造器负责同步移除过路兵或移动易位车；Litex 检查具体特殊走法谓词、稀疏棋盘后继、元数据和三阶段王安全。",
+      "lesson": [
+        {
+          "title": "升变改变落点棋子编码",
+          "paragraphs": [
+            "兵到最后一横线必须明确升为后、车、象或马。candidate after 在目标格放置升变棋子，而不是继续保留兵。"
+          ]
+        },
+        {
+          "title": "吃过路兵同时修改三个格子",
+          "paragraphs": [
+            "源格清空、目标格放置吃子兵、与目标同纵线的相邻敌兵被移除。ep_square 只记录上一手合法双步留下的临时权利。"
+          ]
+        },
+        {
+          "title": "易位权是一段不可恢复的历史",
+          "paragraphs": [
+            "王或对应角车一旦移动，权利永久删除；即使棋子回到原格也不恢复。易位还要求起点、经过格、终点均安全。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "pawn",
+        "castling",
+        "metadata"
+      ],
+      "board_labs": [
+        {
+          "id": "en-passant-live",
+          "title": "过路兵权仍有效",
+          "fen": "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1",
+          "orientation": "white",
+          "active_square": "e5",
+          "instruction": "棋盘上 d6 为空，但 FEN ep=d6，d5 有刚双步的黑兵。",
+          "concepts": [
+            "ep 历史字段",
+            "非目标格吃子"
+          ],
+          "marks": [
+            {
+              "square": "d6",
+              "kind": "ep",
+              "label": "ep 目标"
+            },
+            {
+              "square": "d5",
+              "kind": "capture",
+              "label": "被删除的黑兵"
+            }
+          ],
+          "moves": [
+            {
+              "id": "capture",
+              "uci": "e5d6",
+              "expected": true,
+              "label": "e5xd6 e.p.",
+              "teaching": "候选后继会把白兵放到 d6，同时删除 d5 黑兵。"
+            }
+          ]
+        },
+        {
+          "id": "en-passant-expired",
+          "title": "棋子摆放相同，但过路兵权已消失",
+          "fen": "4k3/8/8/3pP3/8/8/8/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e5",
+          "instruction": "与上一局面棋子完全相同，仅 ep 从 d6 变成 -。",
+          "concepts": [
+            "相同棋盘不同历史"
+          ],
+          "marks": [
+            {
+              "square": "d6",
+              "kind": "danger",
+              "label": "无 ep 权"
+            }
+          ],
+          "moves": [
+            {
+              "id": "capture",
+              "uci": "e5d6",
+              "expected": false,
+              "label": "e5-d6：不能再吃过路兵",
+              "teaching": "目标为空且没有 ep 权，普通斜吃也不成立。"
+            }
+          ]
+        },
+        {
+          "id": "promotion-lab",
+          "title": "到达最后一横线必须明确升变",
+          "fen": "4k3/P7/8/8/8/8/8/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "a7",
+          "instruction": "只操作 a7 白兵。比较明确升后与省略升变参数。",
+          "concepts": [
+            "升变",
+            "结构不变量"
+          ],
+          "marks": [
+            {
+              "square": "a8",
+              "kind": "promotion",
+              "label": "升变格"
+            }
+          ],
+          "moves": [
+            {
+              "id": "queen",
+              "uci": "a7a8q",
+              "expected": true,
+              "label": "a7-a8=Q",
+              "teaching": "候选棋盘 a8 放白后，末横线不再有未升变兵。"
+            },
+            {
+              "id": "missing",
+              "uci": "a7a8",
+              "expected": false,
+              "label": "a7-a8：未选择升变棋子",
+              "teaching": "形状谓词要求 promotion∈{2,3,4,5}，并且结构不变量也拒绝末横线白兵。"
+            }
+          ]
+        },
+        {
+          "id": "castle-right-present",
+          "title": "棋子摆放允许，且 FEN 保留 K 权利",
+          "fen": "4k3/8/8/8/8/8/8/4K2R w K - 0 1",
+          "orientation": "white",
+          "active_square": "e1",
+          "instruction": "只操作 e1 白王，尝试短易位。",
+          "concepts": [
+            "K 权利",
+            "王车同步移动"
+          ],
+          "marks": [
+            {
+              "square": "f1",
+              "kind": "transit",
+              "label": "经过格"
+            },
+            {
+              "square": "g1",
+              "kind": "target",
+              "label": "王终点"
+            },
+            {
+              "square": "h1",
+              "kind": "rook",
+              "label": "易位车"
+            }
+          ],
+          "moves": [
+            {
+              "id": "short",
+              "uci": "e1g1",
+              "expected": true,
+              "label": "e1-g1：合法短易位",
+              "teaching": "王到 g1、车从 h1 到 f1，白方 K/Q 权利均清空。"
+            }
+          ]
+        },
+        {
+          "id": "castle-right-absent",
+          "title": "棋子摆放完全相同，但 FEN 没有 K",
+          "fen": "4k3/8/8/8/8/8/8/4K2R w - - 0 1",
+          "orientation": "white",
+          "active_square": "e1",
+          "instruction": "与上一局面只差 castling 字段。",
+          "concepts": [
+            "历史状态",
+            "相同棋盘不同判定"
+          ],
+          "marks": [
+            {
+              "square": "g1",
+              "kind": "danger",
+              "label": "没有 K 权利"
+            }
+          ],
+          "moves": [
+            {
+              "id": "short",
+              "uci": "e1g1",
+              "expected": false,
+              "label": "e1-g1：历史权利已丢失",
+              "teaching": "候选可以机械摆出王车位置，但 white_kingside_castle 的 right=1 失败。"
+            }
+          ]
+        },
+        {
+          "id": "castle-through-check",
+          "title": "f1 受黑车攻击，王不能穿越",
+          "fen": "4kr2/8/8/8/8/8/8/4K2R w K - 0 1",
+          "orientation": "white",
+          "active_square": "e1",
+          "instruction": "黑车 f8 沿 f 文件攻击 f1。",
+          "concepts": [
+            "经过格安全",
+            "攻击射线"
+          ],
+          "marks": [
+            {
+              "square": "f8",
+              "kind": "attacker",
+              "label": "攻击者"
+            },
+            {
+              "square": "f1",
+              "kind": "attacked",
+              "label": "王经过且受攻击"
+            },
+            {
+              "square": "g1",
+              "kind": "target",
+              "label": "终点"
+            }
+          ],
+          "moves": [
+            {
+              "id": "short",
+              "uci": "e1g1",
+              "expected": false,
+              "label": "e1-g1：经过格受攻击",
+              "teaching": "transit_safe=0，易位专用证书失败。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "castling-valid-kingside",
+          "title": "定义级正例：白方短易位",
+          "query": "by def $white_kingside_castle(6, 0, 0, 4, 1, 5, 1, 7, 1, 0, 1, 1, 1)",
+          "expected": true,
+          "explanation": "王车、空格、权利与三段安全均满足。"
+        },
+        {
+          "id": "castling-invalid-right",
+          "title": "定义级反例：right=0",
+          "query": "by def $white_kingside_castle(6, 0, 0, 4, 0, 5, 1, 7, 1, 0, 1, 1, 1)",
+          "expected": false,
+          "explanation": "棋盘参数相同，但历史权利缺失。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "check-and-responses",
+      "number": 7,
+      "part": "III",
+      "part_title": "第三编　王安全与战术关系",
+      "title": "将军与三类应将：移王、吃子、挡线",
+      "summary": "正在受将时，任何看似正常的棋子走法都必须真正解除攻击；局部几何成立不是充分条件。",
+      "goals": [
+        "从攻击者、路径和王格读出将军。",
+        "掌握移王、吃掉将军子、阻挡滑行攻击三类应对。",
+        "理解马将和贴身将通常不能通过挡线解决。"
+      ],
+      "engine_note": "局面实验同时展示走前攻击者、走后攻击者和最终 king_safe 调用，避免只看一条棋子几何。",
+      "lesson": [
+        {
+          "title": "应将的统一判据是走后本方王安全",
+          "paragraphs": [
+            "引擎不需要为‘应将’另写一个特殊开关。所有候选都在 candidate after 上重新扫描本方王；攻击者数量非零即拒绝。"
+          ]
+        },
+        {
+          "title": "挡将只对滑行攻击有效",
+          "paragraphs": [
+            "车、象、后与王之间若存在严格中间格，可以把棋子放入攻击路径；马的攻击没有中间格，兵和王的邻接攻击也无法通过挡线解除。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "safety",
+        "pieces"
+      ],
+      "board_labs": [
+        {
+          "id": "answer-check-by-blocking",
+          "title": "正在被将时，只有真正解除将军的走法才合法",
+          "fen": "4r1k1/8/8/8/8/8/8/2B1K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "c1",
+          "instruction": "黑车 e8 沿 e 文件将军。只操作 c1 白象，比较 Be3 挡线与 Bb2 无关走法。",
+          "concepts": [
+            "应将",
+            "挡将",
+            "走后王安全"
+          ],
+          "marks": [
+            {
+              "square": "e8",
+              "kind": "attacker",
+              "label": "将军的黑车"
+            },
+            {
+              "square": "e1",
+              "kind": "king",
+              "label": "受将白王"
+            },
+            {
+              "square": "e3",
+              "kind": "shield",
+              "label": "可挡住 e 文件"
+            },
+            {
+              "square": "b2",
+              "kind": "danger",
+              "label": "不解除将军"
+            }
+          ],
+          "moves": [
+            {
+              "id": "block",
+              "uci": "c1e3",
+              "expected": true,
+              "label": "Be3：挡住攻击线",
+              "teaching": "象的几何成立，且走后 e3 位于 e8 与 e1 之间，白王安全。"
+            },
+            {
+              "id": "ignore",
+              "uci": "c1b2",
+              "expected": false,
+              "label": "Bb2?：忽略将军",
+              "teaching": "局部象步合法，但走后黑车仍攻击 e1，king_safe 失败。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "safety-valid-king",
+          "title": "定义级正例：唯一王且零攻击者",
+          "query": "by def $king_safe(1, 0)",
+          "expected": true,
+          "explanation": "汇总满足。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "pins",
+      "number": 8,
+      "part": "III",
+      "part_title": "第三编　王安全与战术关系",
+      "title": "绝对牵制与相对牵制：规则和战术的边界",
+      "summary": "绝对牵制连接王安全，因此移动被牵制子可能非法；相对牵制只暴露后、车等棋子，通常仍是合法着。",
+      "goals": [
+        "区分绝对牵制与相对牵制。",
+        "解释为什么同样的开放线路在一个局面非法、另一个局面合法。",
+        "理解规则引擎不替玩家判断战术好坏。"
+      ],
+      "engine_note": "绝对牵制由现有王安全合同自然处理；相对牵制作为教学目标攻击扫描呈现，不加入合法性总合同。",
+      "lesson": [
+        {
+          "title": "绝对牵制是合法性问题",
+          "paragraphs": [
+            "若遮挡子移开会让己方王直接受攻击，走后王安全失败；沿牵制线继续遮挡或吃掉攻击者则可能合法。"
+          ]
+        },
+        {
+          "title": "相对牵制是局面评价问题",
+          "paragraphs": [
+            "若遮挡子后面是后或车而不是王，移开后即使损失重大，规则上仍可走。教材会把新打开的攻击显示出来，但 Litex 不应把‘坏棋’误判为‘非法棋’。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "safety",
+        "pieces"
+      ],
+      "board_labs": [
+        {
+          "id": "pinned-rook",
+          "title": "e2 白车被钉在白王前方",
+          "fen": "k3r3/8/8/8/8/8/4R3/4K3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "黑车 e8、白王 e1、白车 e2。只操作 e2 白车。",
+          "concepts": [
+            "绝对钉住",
+            "走后王安全"
+          ],
+          "marks": [
+            {
+              "square": "e8",
+              "kind": "attacker",
+              "label": "黑车攻击源"
+            },
+            {
+              "square": "e2",
+              "kind": "shield",
+              "label": "当前遮挡子"
+            },
+            {
+              "square": "e1",
+              "kind": "king",
+              "label": "白王"
+            }
+          ],
+          "moves": [
+            {
+              "id": "sideways",
+              "uci": "e2f2",
+              "expected": false,
+              "label": "e2-f2：几何合法但暴露王",
+              "teaching": "走后 e8 黑车成为不安全攻击者。"
+            },
+            {
+              "id": "stay-file",
+              "uci": "e2e3",
+              "expected": true,
+              "label": "e2-e3：仍遮挡 e 文件",
+              "teaching": "白车仍位于黑车与白王之间。"
+            },
+            {
+              "id": "capture",
+              "uci": "e2e8",
+              "expected": true,
+              "label": "e2xe8：沿线吃掉攻击者",
+              "teaching": "路径为空，目标为敌车，走后王安全。"
+            }
+          ],
+          "teaching_targets": []
+        },
+        {
+          "id": "relative-pin-queen",
+          "title": "相对牵制：遮挡子可以移动，但会暴露更有价值的棋子",
+          "fen": "4r1k1/8/8/8/8/8/4B3/4Q1K1 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "黑车 e8、白象 e2、白后 e1 在同一条 e 文件上。移动白象不会暴露白王，因此规则上允许。",
+          "concepts": [
+            "相对牵制",
+            "战术损失不等于非法",
+            "开放线路"
+          ],
+          "marks": [
+            {
+              "square": "e8",
+              "kind": "attacker",
+              "label": "黑车"
+            },
+            {
+              "square": "e2",
+              "kind": "shield",
+              "label": "被相对牵制的白象"
+            },
+            {
+              "square": "e1",
+              "kind": "target",
+              "label": "白后：移动后被攻击"
+            },
+            {
+              "square": "g1",
+              "kind": "king",
+              "label": "白王不在 e 文件"
+            }
+          ],
+          "teaching_targets": [
+            {
+              "square": "e1",
+              "attacker_side": -1,
+              "label": "白后 e1"
+            }
+          ],
+          "moves": [
+            {
+              "id": "move-away",
+              "uci": "e2f3",
+              "expected": true,
+              "label": "Bf3：规则上合法",
+              "teaching": "走后白王仍安全；教学追踪会显示黑车新打开了对 e1 白后的攻击。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [],
+      "endgame_labs": []
+    },
+    {
+      "slug": "discovered-double-check",
+      "number": 9,
+      "part": "III",
+      "part_title": "第三编　王安全与战术关系",
+      "title": "闪击、闪将与双将",
+      "summary": "一个棋子离开线路可以释放后方滑行子的攻击；若移动棋子本身也同时将军，就形成双将。",
+      "goals": [
+        "识别遮挡子、潜伏攻击子和被攻击目标。",
+        "区分普通将军、闪将与双将。",
+        "理解双将时为何只能移动王。"
+      ],
+      "engine_note": "v0.8.0 的追踪会比较对方王走前/走后的攻击者集合，并标记未将军、将军、闪将或双将；该分类用于解释，不改变原有门禁。",
+      "lesson": [
+        {
+          "title": "闪击是开放线路的通用结构",
+          "paragraphs": [
+            "遮挡子移开后，后方车、象或后开始攻击目标；若目标是王，称为闪将。若目标是后等棋子，则是一般闪击。"
+          ]
+        },
+        {
+          "title": "双将来自两个同时存在的攻击者",
+          "paragraphs": [
+            "常见情形是移动棋子直接将军，同时开放后方棋子的线路。由于一次着法通常无法同时吃掉或挡住两个攻击者，合法应对只能是王移到安全格。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "safety",
+        "pieces"
+      ],
+      "board_labs": [
+        {
+          "id": "discovered-and-double-check",
+          "title": "同一个遮挡子：移开可形成闪将，落到攻击线上可形成双将",
+          "fen": "4k3/8/8/8/8/8/4B3/K3R3 w - - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "白车 e1 的 e 文件被白象 e2 遮住。只移动白象，观察对黑王 e8 的攻击者数量。",
+          "concepts": [
+            "闪将",
+            "双将",
+            "攻击者集合"
+          ],
+          "marks": [
+            {
+              "square": "e1",
+              "kind": "attacker",
+              "label": "潜伏的白车"
+            },
+            {
+              "square": "e2",
+              "kind": "shield",
+              "label": "遮挡白象"
+            },
+            {
+              "square": "e8",
+              "kind": "king",
+              "label": "黑王"
+            },
+            {
+              "square": "f3",
+              "kind": "target",
+              "label": "仅打开车线"
+            },
+            {
+              "square": "b5",
+              "kind": "target",
+              "label": "同时由象直接将军"
+            }
+          ],
+          "moves": [
+            {
+              "id": "discovered",
+              "uci": "e2f3",
+              "expected": true,
+              "label": "Bf3+：闪将",
+              "teaching": "白象本身不攻击 e8，但它离开 e 文件后白车成为唯一将军者。"
+            },
+            {
+              "id": "double",
+              "uci": "e2b5",
+              "expected": true,
+              "label": "Bb5++：双将",
+              "teaching": "白车沿 e 文件将军，白象又沿 b5–e8 对角线将军，攻击者数量为 2。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [
+        {
+          "id": "double-check-response",
+          "title": "双将后的应对：扫描结果只会留下王着",
+          "fen": "4k3/8/8/1B6/8/8/8/K3R3 b - - 1 1",
+          "orientation": "black",
+          "instruction": "黑王 e8 同时受到 e1 白车与 b5 白象攻击。运行扫描并观察合法着来源。",
+          "concepts": [
+            "双将",
+            "只能移王",
+            "两个攻击者"
+          ],
+          "expected_status": "check",
+          "marks": [
+            {
+              "square": "e8",
+              "kind": "king",
+              "label": "黑王"
+            },
+            {
+              "square": "e1",
+              "kind": "attacker",
+              "label": "白车"
+            },
+            {
+              "square": "b5",
+              "kind": "attacker",
+              "label": "白象"
+            }
+          ]
+        }
+      ],
+      "history_labs": [],
+      "examples": [],
+      "endgame_labs": []
+    },
+    {
+      "slug": "mate-stalemate",
+      "number": 10,
+      "part": "IV",
+      "part_title": "第四编　终局、和棋与历史",
+      "title": "将死、逼和、死局与合法着集合",
+      "summary": "终局状态不是看某一个格子，而是把当前是否受将与全部合法着是否为空结合起来。",
+      "goals": [
+        "用‘受将 + 零合法着’定义将死。",
+        "用‘未受将 + 零合法着’定义逼和。",
+        "区分逼和与死局：死局可能仍有合法着。"
+      ],
+      "engine_note": "状态实验先由 Python 生成有限几何候选，再逐个送入同一 Litex 门禁；将死/逼和是对合法着全集与将军状态的宿主侧汇总，可信边界在结果中明示。",
+      "lesson": [
+        {
+          "title": "将死与逼和只差一个条件",
+          "paragraphs": [
+            "两者都要求轮到行棋的一方没有任何合法着。若王在受将则是将死；若王不受将则是逼和并立即和棋。"
+          ]
+        },
+        {
+          "title": "死局关注未来是否可能出现将死",
+          "paragraphs": [
+            "FIDE 的死局概念要求任何合法着序列都不可能导致将死。仅剩双王、王象对王、王马对王是直接例子。当前演示器只保守识别这些标准材料情形。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "safety",
+        "contract"
+      ],
+      "board_labs": [],
+      "status_labs": [
+        {
+          "id": "ordinary-check",
+          "title": "将军但尚未将死：合法着集合仍非空",
+          "fen": "4k3/8/8/8/8/8/4R3/4K3 b - - 0 1",
+          "orientation": "black",
+          "instruction": "黑王 e8 正被白车 e2 沿 e 文件将军。运行扫描，列出全部经 Litex 接受的应将着。",
+          "concepts": [
+            "将军",
+            "合法应对",
+            "合法着全集"
+          ],
+          "expected_status": "check",
+          "marks": [
+            {
+              "square": "e8",
+              "kind": "king",
+              "label": "受将黑王"
+            },
+            {
+              "square": "e2",
+              "kind": "attacker",
+              "label": "白车"
+            }
+          ]
+        },
+        {
+          "id": "checkmate-net",
+          "title": "将死：正在受将且一个合法应对也没有",
+          "fen": "7k/6Q1/5K2/8/8/8/8/8 b - - 0 1",
+          "orientation": "black",
+          "instruction": "黑王 h8 被白后 g7 将军；白王 f6 保护白后并封锁逃格。",
+          "concepts": [
+            "将死",
+            "零合法着",
+            "王后协同"
+          ],
+          "expected_status": "checkmate",
+          "marks": [
+            {
+              "square": "h8",
+              "kind": "king",
+              "label": "黑王"
+            },
+            {
+              "square": "g7",
+              "kind": "attacker",
+              "label": "将军白后"
+            },
+            {
+              "square": "f6",
+              "kind": "shield",
+              "label": "保护白后的白王"
+            }
+          ]
+        },
+        {
+          "id": "stalemate-net",
+          "title": "逼和：不受将，但轮到行棋的一方没有合法着",
+          "fen": "7k/5Q2/7K/8/8/8/8/8 b - - 0 1",
+          "orientation": "black",
+          "instruction": "黑王 h8 当前不在将军中，但 h7、g7、g8 都受白方控制。",
+          "concepts": [
+            "逼和",
+            "不受将",
+            "零合法着"
+          ],
+          "expected_status": "stalemate",
+          "marks": [
+            {
+              "square": "h8",
+              "kind": "king",
+              "label": "黑王未受将"
+            },
+            {
+              "square": "f7",
+              "kind": "attacker",
+              "label": "白后控制逃格"
+            },
+            {
+              "square": "h6",
+              "kind": "shield",
+              "label": "白王协同"
+            }
+          ]
+        },
+        {
+          "id": "fools-mate-final",
+          "title": "两步将杀：1.f3 e5 2.g4 Qh4#",
+          "fen": "rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3",
+          "orientation": "white",
+          "expected_status": "checkmate",
+          "instruction": "黑后沿 h4–e1 对角线将军。白方全部精确候选经过王安全筛选后，合法应对数必须为 0。",
+          "marks": [
+            {
+              "square": "e1",
+              "kind": "king",
+              "label": "被将的白王"
+            },
+            {
+              "square": "h4",
+              "kind": "attacker",
+              "label": "将军者"
+            },
+            {
+              "square": "g3",
+              "kind": "path",
+              "label": "攻击线"
+            },
+            {
+              "square": "f2",
+              "kind": "path",
+              "label": "攻击线"
+            }
+          ],
+          "workbench_fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "workbench_label": "在工作台从初始局面依次走 f3、e5、g4、Qh4#"
+        }
+      ],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "contract-valid-total",
+          "title": "定义级正例：完整汇总为零",
+          "query": "by def $legal_transition(1, 0, 0, 1, 1, 1, 1, 0, 0)",
+          "expected": true,
+          "explanation": "形状证书唯一，元数据与王安全无失配，走前走后结构不变量均成立。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "material-dead-positions",
+      "number": 11,
+      "part": "IV",
+      "part_title": "第四编　终局、和棋与历史",
+      "title": "单马、单象、双马与“不能强杀/死局”的区别",
+      "summary": "从材料结构区分自动死局、理论上不能强制将杀以及仍可能在配合下出现将杀的局面。",
+      "goals": [
+        "理解王马对王与王象对王为何属于死局。",
+        "知道“双马通常不能强杀”不等于任何合法续着都不可能将死。",
+        "把死局、逼和与协议和棋区分开。"
+      ],
+      "engine_note": "当前程序使用保守材料识别器：只对双王、单象/单马对王以及若干同色格象情形给出 dead=true；其他材料局面保持“不作结论”，避免把经验性残局结论冒充规则证明。",
+      "lesson": [
+        {
+          "title": "死局是对所有合法续着的断言",
+          "paragraphs": [
+            "死局要求从当前局面出发，无论双方怎样合法走子，都不可能出现将死。因此它比“优势方无法强制取胜”更强。"
+          ],
+          "points": [
+            "死局立即自动和棋。",
+            "逼和则要求当前轮到的一方没有合法着且未被将军。"
+          ]
+        },
+        {
+          "title": "单马与单象对单王",
+          "paragraphs": [
+            "王加单马或王加单象无法同时覆盖形成将死所需的逃格和王所在格，因此保守识别器可以直接确认死局。"
+          ]
+        },
+        {
+          "title": "双马对单王为什么要谨慎",
+          "paragraphs": [
+            "双马对单王通常不能在最佳防守下强制将杀，但若防守方配合，仍可能到达合法将杀图形。因此不能仅凭“不能强杀”把所有双马局面标成死局。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "safety",
+        "contract"
+      ],
+      "board_labs": [],
+      "status_labs": [
+        {
+          "id": "bare-kings-dead",
+          "title": "仅剩双王：棋盘上仍有合法着，但属于死局",
+          "fen": "4k3/8/8/8/8/8/8/4K3 w - - 0 1",
+          "orientation": "white",
+          "instruction": "合法着集合非空，所以它既非将死也非逼和；但任何合法序列都不可能产生将死。",
+          "concepts": [
+            "死局",
+            "合法着非空",
+            "自动和棋"
+          ],
+          "expected_status": "ongoing",
+          "marks": [
+            {
+              "square": "e1",
+              "kind": "king",
+              "label": "白王"
+            },
+            {
+              "square": "e8",
+              "kind": "king",
+              "label": "黑王"
+            }
+          ],
+          "expected_dead_position": true
+        },
+        {
+          "id": "knight-only-dead",
+          "title": "王马对单王：死局",
+          "fen": "8/8/8/8/3k4/8/6K1/7N w - - 0 1",
+          "instruction": "运行状态分析并查看保守死局识别。",
+          "concepts": [
+            "单马",
+            "死局"
+          ],
+          "expected_status": "ongoing",
+          "expected_dead_position": true
+        },
+        {
+          "id": "bishop-only-dead",
+          "title": "王象对单王：死局",
+          "fen": "8/8/8/8/3k4/8/6K1/7B w - - 0 1",
+          "instruction": "局面仍有合法着，但规则结果已经是死局和棋。",
+          "concepts": [
+            "单象",
+            "死局"
+          ],
+          "expected_status": "ongoing",
+          "expected_dead_position": true
+        },
+        {
+          "id": "two-knights-not-auto-dead",
+          "title": "双马对单王：保守识别器不自动判死局",
+          "fen": "8/8/8/8/3k4/8/6K1/6NN w - - 0 1",
+          "instruction": "比较“不能强杀”与“任何续着都不可能将死”。",
+          "concepts": [
+            "双马",
+            "不能强杀",
+            "不自动判死局"
+          ],
+          "expected_status": "ongoing",
+          "expected_dead_position": false
+        },
+        {
+          "id": "same-colour-bishops-dead",
+          "title": "双方只剩同色格象：保守识别为死局",
+          "fen": "4k3/8/8/8/8/2b5/7B/6K1 w - - 0 1",
+          "orientation": "white",
+          "expected_status": "ongoing",
+          "instruction": "两枚象都只能活动在同一颜色格上，无法构造将死。",
+          "marks": [
+            {
+              "square": "c3",
+              "kind": "path",
+              "label": "同色格象"
+            },
+            {
+              "square": "h2",
+              "kind": "path",
+              "label": "同色格象"
+            }
+          ],
+          "expected_dead_position": true
+        }
+      ],
+      "history_labs": [],
+      "examples": [
+        {
+          "id": "material-safe-king",
+          "title": "定义级观察：唯一王且无攻击者",
+          "query": "by def $king_safe(1, 0)",
+          "expected": true,
+          "explanation": "这是局面安全的局部汇总，不是死局判定本身。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "draw-history",
+      "number": 12,
+      "part": "IV",
+      "part_title": "第四编　终局、和棋与历史",
+      "title": "重复局面、五十/七十五回合与棋局事件",
+      "summary": "把重复身份键、halfmove 阈值以及申和/自动和棋/协议事件放到同一条历史时间线上。",
+      "goals": [
+        "构造不包含回合计数器的重复身份键。",
+        "区分三次重复与五次重复、五十回合与七十五回合。",
+        "理解申和、认输、超时等属于棋局事件层。"
+      ],
+      "engine_note": "历史分析只消费已经通过 Litex 门禁并提交的 Position；棋子摆放、行棋方、易位权和真正可用的吃过路兵权参与重复身份，halfmove/fullmove 不参与。",
+      "lesson": [
+        {
+          "title": "重复键包含哪些字段",
+          "paragraphs": [
+            "棋子种类、颜色与位置必须相同，轮到同一方行棋，可行走法也必须相同。实现上使用 placement、active、castling 与有效 ep。halfmove、fullmove 不参与身份。"
+          ]
+        },
+        {
+          "title": "过路兵字段要看是否真的可走",
+          "paragraphs": [
+            "FEN 可能记录一个 ep 目标，但若不存在合法吃过路兵，局面的可行走法集合并未因此改变。v0.8.0 会把潜在 ep 候选送入 Litex 门禁，只在确有合法吃法时纳入重复键。"
+          ]
+        },
+        {
+          "title": "三次与五次的程序语义不同",
+          "paragraphs": [
+            "第三次出现赋予符合条件的一方申和权，系统不应擅自自动终局；第五次出现则属于自动和棋条件。"
+          ],
+          "points": [
+            "本教材的历史实验展示“局面刚刚第三次出现”后的申和条件。正式比赛规则还允许行棋方先登记一手不可更改的预定着，并据此主张该着将使局面第三次出现。",
+            "程序不能把 threefold_claim_available 当作自动结束；申和、裁判核验与棋钟暂停属于比赛事件层。"
+          ]
+        },
+        {
+          "title": "halfmove 统计的是双方半回合",
+          "paragraphs": [
+            "每一手安静非兵着加一；任何兵走或吃子归零。达到 100 时可能申和，达到 150 时自动和棋。"
+          ],
+          "points": [
+            "本教材的阈值实验展示某手已经提交后 halfmove 达到 100 或 150。正式比赛中，五十回合申和也可以基于一手预先登记且不可更改的拟走之着。",
+            "halfmove 只是计数器；它不记录申和是否被提出、是否正确，也不自行终止三次重复或五十回合情形。"
+          ]
+        },
+        {
+          "title": "最后一手将死优先",
+          "paragraphs": [
+            "七十五回合阈值若由最后一手达到，但该手同时完成将死，则将死立即结束棋局，不再按自动和棋处理。"
+          ]
+        },
+        {
+          "title": "协议和棋与认输是棋局事件",
+          "paragraphs": [
+            "双方同意和棋、认输、超时等不只是 Position 的棋盘谓词，需要比赛事件层记录。教材不会伪装成仅凭 FEN 就能推导这些结果。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "metadata",
+        "contract"
+      ],
+      "board_labs": [
+        {
+          "id": "rook-removes-castling",
+          "title": "h1 白车一旦移动，K 权利永久删除",
+          "fen": "4k3/8/8/8/8/8/8/4K2R w K - 7 12",
+          "orientation": "white",
+          "active_square": "h1",
+          "instruction": "只操作 h1 白车，观察棋盘变化很小，但 castling 与计数器都会更新。",
+          "concepts": [
+            "易位权删除",
+            "halfmove"
+          ],
+          "marks": [
+            {
+              "square": "h1",
+              "kind": "rights",
+              "label": "K 权利对应角车"
+            },
+            {
+              "square": "h2",
+              "kind": "target",
+              "label": "移动后"
+            }
+          ],
+          "moves": [
+            {
+              "id": "up",
+              "uci": "h1h2",
+              "expected": true,
+              "label": "h1-h2：合法安静车步",
+              "teaching": "after 的 castling 从 K 变为 -；halfmove 7→8；turn 变黑；fullmove 仍为 12。"
+            }
+          ]
+        },
+        {
+          "id": "black-fullmove-counter",
+          "title": "黑方安静走子后完整回合数加一",
+          "fen": "r3k3/8/8/8/8/8/8/4K3 b - - 9 12",
+          "orientation": "white",
+          "active_square": "a8",
+          "instruction": "只操作 a8 黑车。",
+          "concepts": [
+            "fullmove",
+            "黑方走完"
+          ],
+          "marks": [
+            {
+              "square": "a8",
+              "kind": "source",
+              "label": "黑车"
+            },
+            {
+              "square": "a7",
+              "kind": "target",
+              "label": "目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "up",
+              "uci": "a8a7",
+              "expected": true,
+              "label": "...Ra7：黑方安静车步",
+              "teaching": "halfmove 9→10，fullmove 12→13，turn 变白。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [
+        {
+          "id": "threefold-cycle",
+          "title": "同一局面第三次出现：可以申和，但不会自动停棋",
+          "fen": "4k1n1/8/8/8/8/8/8/4K1N1 w - - 0 1",
+          "sequence": [
+            "g1f3",
+            "g8f6",
+            "f3g1",
+            "f6g8",
+            "g1f3",
+            "g8f6",
+            "f3g1",
+            "f6g8"
+          ],
+          "instruction": "两匹马完成两轮往返。根局面的重复键在第 8 个半回合后累计到 3。",
+          "concepts": [
+            "三次重复",
+            "申和权",
+            "重复键"
+          ],
+          "expect": {
+            "occurrence": 3,
+            "threefold_claim_available": true,
+            "fivefold_automatic": false
+          }
+        },
+        {
+          "id": "fivefold-cycle",
+          "title": "同一局面第五次出现：自动和棋",
+          "fen": "4k1n1/8/8/8/8/8/8/4K1N1 w - - 0 1",
+          "sequence": [
+            "g1f3",
+            "g8f6",
+            "f3g1",
+            "f6g8",
+            "g1f3",
+            "g8f6",
+            "f3g1",
+            "f6g8",
+            "g1f3",
+            "g8f6",
+            "f3g1",
+            "f6g8",
+            "g1f3",
+            "g8f6",
+            "f3g1",
+            "f6g8"
+          ],
+          "instruction": "同一四步循环完成四轮，连同初始局面共出现 5 次。",
+          "concepts": [
+            "五次重复",
+            "自动和棋",
+            "历史计数"
+          ],
+          "expect": {
+            "occurrence": 5,
+            "fivefold_automatic": true
+          }
+        },
+        {
+          "id": "castling-rights-change-key",
+          "title": "棋子回到原格也未必是同一局面：易位权已经消失",
+          "fen": "4k2r/8/8/8/8/8/8/4K2R w Kk - 0 1",
+          "sequence": [
+            "e1f1",
+            "e8f8",
+            "f1e1",
+            "f8e8"
+          ],
+          "instruction": "双王都离开再返回。最终棋子摆放与初始相同，但 K、k 权利不可恢复。",
+          "concepts": [
+            "重复局面身份",
+            "易位权",
+            "历史不可逆"
+          ],
+          "expect": {
+            "occurrence": 1,
+            "threefold_claim_available": false
+          }
+        },
+        {
+          "id": "fifty-move-threshold",
+          "title": "halfmove 由 99 到 100：出现五十回合申和条件",
+          "fen": "4k3/8/8/8/8/8/8/R3K3 w - - 99 1",
+          "sequence": [
+            "a1a2"
+          ],
+          "instruction": "白车走一手不吃子的安静着，halfmove 达到 100。",
+          "concepts": [
+            "五十回合规则",
+            "申和",
+            "halfmove"
+          ],
+          "expect": {
+            "fifty_move_claim_available": true,
+            "seventy_five_move_automatic": false
+          }
+        },
+        {
+          "id": "seventy-five-threshold",
+          "title": "halfmove 由 149 到 150：七十五回合自动和棋阈值",
+          "fen": "4k3/8/8/8/8/8/8/R3K3 w - - 149 1",
+          "sequence": [
+            "a1a2"
+          ],
+          "instruction": "安静车步使 halfmove 达到 150；若最后一手同时将死，则将死优先。",
+          "concepts": [
+            "七十五回合规则",
+            "自动和棋",
+            "将死优先"
+          ],
+          "expect": {
+            "seventy_five_move_automatic": true
+          }
+        }
+      ],
+      "examples": [
+        {
+          "id": "metadata-valid",
+          "title": "定义级正例：全部元数据一致",
+          "query": "by def $metadata_transition(-1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 3, 3, 0, 0, 1, 1)",
+          "expected": true,
+          "explanation": "九组 actual/expected 全部相等。"
+        },
+        {
+          "id": "metadata-invalid-castling",
+          "title": "定义级反例：候选 K=1、期望 K=0",
+          "query": "by def $metadata_transition(-1, -1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 8, 8, 12, 12)",
+          "expected": false,
+          "explanation": "易位权不一致。"
+        }
+      ],
+      "endgame_labs": []
+    },
+    {
+      "slug": "basic-mating-methods",
+      "number": 13,
+      "part": "V",
+      "part_title": "第五编　基础残局方法与互动训练",
+      "title": "王车与王后杀王：限制、靠王与最后一将",
+      "summary": "从“建立盒子—己王靠近—继续压缩—边线收官”的顺序学习基础重子残局，并明确避免逼和。",
+      "goals": [
+        "用车或后逐步缩小敌王活动区。",
+        "理解己王为何必须靠近并控制逃格。",
+        "在最后一将前持续检查重子安全与逼和风险。"
+      ],
+      "engine_note": "教材给出教学启发式而非声称最短将杀；每一手实际练习仍走工作台的同一 Litex 证书门禁。",
+      "lesson": [
+        {
+          "title": "第一阶段：建立并缩小盒子",
+          "paragraphs": [
+            "用重子切断一条横线、纵线或对角线，把敌王限制到更小区域。不要把重子放到敌王可直接吃到且无人保护的位置。"
+          ],
+          "points": [
+            "车通常与敌王隔一条线建立围栏。",
+            "后限制更强，也更容易造成意外逼和。"
+          ]
+        },
+        {
+          "title": "第二阶段：让己王靠近",
+          "paragraphs": [
+            "重子只能限制部分逃格，最后的相邻逃格需要己王控制。王之间不能相邻，因此要按“对王”关系推进。"
+          ]
+        },
+        {
+          "title": "第三阶段：受保护的最后一将",
+          "paragraphs": [
+            "敌王到边线后，由己王控制相邻逃格，重子在安全距离上将军。若没有将军却封死全部合法格，结果是逼和。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "pieces",
+        "safety",
+        "contract"
+      ],
+      "board_labs": [],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [],
+      "endgame_labs": [],
+      "curriculum_kind": "endgame-method",
+      "endgame_courses": [
+        "rook-mate-box",
+        "rook-mate-edge",
+        "queen-mate"
+      ]
+    },
+    {
+      "slug": "interactive-endgames",
+      "number": 14,
+      "part": "V",
+      "part_title": "第五编　基础残局方法与互动训练",
+      "title": "互动基础残局训练",
+      "summary": "在教材迷你棋盘中选择源格与目标格；学习者着法和自动防守着都复用工作台的同一 Litex 门禁。",
+      "goals": [
+        "完成王车对王训练",
+        "完成王后对王训练",
+        "观察王马对王为何属于自动死局",
+        "阅读合法目标、提示、历史与状态"
+      ],
+      "engine_note": "每个训练局面与工作台共享 Position、候选构造和 Litex 门禁；网页只负责选择课程、显示合法目标与训练提示。",
+      "lesson": [
+        {
+          "title": "选择课程并读取训练目标",
+          "paragraphs": [
+            "先辨认当前材料、行棋方和目标：王车、王后残局需要完成将杀；王马对王用于识别规则意义上的死局。"
+          ]
+        },
+        {
+          "title": "每一手都使用正式门禁",
+          "paragraphs": [
+            "点击源格与目标格只构造候选。学习者着法和自动防守着都必须由同一 Litex 证书接受，失败时局面回滚。"
+          ]
+        },
+        {
+          "title": "训练反馈不是第二套棋规",
+          "paragraphs": [
+            "“缩小盒子、己王靠近、避免逼和”等属于教学提示；合法性、将军、将死和逼和仍由统一状态链路给出。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "pieces",
+        "safety",
+        "contract"
+      ],
+      "board_labs": [],
+      "status_labs": [],
+      "history_labs": [],
+      "examples": [],
+      "endgame_labs": [],
+      "curriculum_kind": "endgame-training",
+      "interactive_endgames": [
+        "rook-mate-box",
+        "rook-mate-edge",
+        "queen-mate",
+        "knight-dead",
+        "bishop-dead"
+      ]
+    },
+    {
+      "slug": "certificate-audit",
+      "number": 15,
+      "part": "VI",
+      "part_title": "第六编　形式化证书与可信边界",
+      "title": "Agent 走法记录、完整证书与可信边界",
+      "summary": "把 move(e2,e4) 与明确的 result(...) 作为可读封面，随后展开稀疏棋盘、元数据、王安全和最终接受合同。",
+      "goals": [
+        "区分 Agent 可读走法记录与完整形式化证书。",
+        "理解稀疏棋盘后继、元数据与王安全各自承担的责任。",
+        "明确 Python 证书编译器与 Litex 核验器之间的可信边界。"
+      ],
+      "engine_note": "工作台源码面板是同一真实查询的三层只读视图。拒绝候选仍可审计其查询，但 Agent 记录不会被视为已建立，因为整个事务回滚。",
+      "lesson": [
+        {
+          "title": "总合同不是魔法入口",
+          "paragraphs": [
+            "legal_transition 只汇总此前算出的 mismatch 与 unsafe 计数。若形状、路径或安全调用失败，整份 Litex 运行就不会被接受。"
+          ]
+        },
+        {
+          "title": "源码审计要同时看定义和实例",
+          "paragraphs": [
+            "固定规则内核给出可复用谓词；本手证书把当前棋盘、路径、攻击计数和期望后继代入这些谓词。只看其中一边都不足以理解验证。"
+          ]
+        },
+        {
+          "title": "当前可信计算基",
+          "paragraphs": [
+            "Python 仍负责候选构造、形状选择、路径与攻击扫描、期望状态和状态集合汇总；Litex 核验被编译出的具体事实。后续研究方向是把更多通用后继关系和攻击关系下沉到 Litex。"
+          ]
+        }
+      ],
+      "source_refs": [
+        "lifecycle",
+        "contract",
+        "examples"
+      ],
+      "board_labs": [
+        {
+          "id": "contract-layer-separation",
+          "title": "同一初始局面：合法双步与非法三步的证书层差异",
+          "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+          "orientation": "white",
+          "active_square": "e2",
+          "instruction": "分别运行 e2-e4 与 e2-e5，展开“证书调用分组”和“稀疏编辑与全盘码”。",
+          "concepts": [
+            "Agent 记录",
+            "证书分层",
+            "稀疏后继",
+            "失败定位"
+          ],
+          "marks": [
+            {
+              "square": "e4",
+              "kind": "safe",
+              "label": "合法目标"
+            },
+            {
+              "square": "e5",
+              "kind": "danger",
+              "label": "非法目标"
+            }
+          ],
+          "moves": [
+            {
+              "id": "legal",
+              "uci": "e2e4",
+              "expected": true,
+              "label": "e2-e4：所有证书组通过",
+              "teaching": "形状、棋盘、元数据、安全与总合同一致。"
+            },
+            {
+              "id": "illegal-shape",
+              "uci": "e2e5",
+              "expected": false,
+              "label": "e2-e5：棋盘层可一致，形状层失败",
+              "teaching": "重点查看 receipt 失败语句与 sparse_board_transition 的全盘码等式成立。"
+            }
+          ]
+        }
+      ],
+      "status_labs": [],
+      "history_labs": [],
+      "endgame_labs": [],
+      "examples": [
+        {
+          "id": "contract-invalid-board",
+          "title": "定义级反例：元数据失配数为 1",
+          "query": "by def $legal_transition(1, 1, 0, 1, 1, 1, 1, 0, 0)",
+          "expected": false,
+          "explanation": "metadata_mismatch_count 必须为 0；棋盘完整性由独立的 sparse_board_transition 检查。"
+        },
+        {
+          "id": "examples-valid-coordinate",
+          "title": "再看一个可接受定义调用",
+          "query": "by def $coordinate(5, 4)",
+          "expected": true,
+          "explanation": "局部坐标事实成立。"
+        },
+        {
+          "id": "examples-invalid-coordinate",
+          "title": "再看一个应拒绝定义调用",
+          "query": "by def $coordinate(0, 4)",
+          "expected": false,
+          "explanation": "file=0 越界。"
+        }
+      ],
+      "curriculum_kind": "formal-agent-contract"
+    }
+  ],
+  "parts": [
+    {
+      "id": "I",
+      "title": "第一编　局面、状态与可读执行链",
+      "chapters": [
+        1,
+        2
+      ]
+    },
+    {
+      "id": "II",
+      "title": "第二编　棋子走法与特殊规则",
+      "chapters": [
+        3,
+        4,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "III",
+      "title": "第三编　王安全与战术关系",
+      "chapters": [
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "id": "IV",
+      "title": "第四编　终局、和棋与历史",
+      "chapters": [
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "id": "V",
+      "title": "第五编　基础残局方法与互动训练",
+      "chapters": [
+        13,
+        14
+      ]
+    },
+    {
+      "id": "VI",
+      "title": "第六编　形式化证书与可信边界",
+      "chapters": [
+        15
+      ]
+    }
+  ]
+}

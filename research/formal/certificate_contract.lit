@@ -1,0 +1,15 @@
+# Stable finite-certificate contract used by the application boundary.
+
+prop transition_certificate(shape_count, board_mismatch, metadata_mismatch, unsafe_count, pre_white_kings, pre_black_kings, post_white_kings, post_black_kings, pre_last_rank_pawns, post_last_rank_pawns Z):
+    shape_count = 1
+    board_mismatch = 0
+    metadata_mismatch = 0
+    unsafe_count = 0
+    pre_white_kings = 1
+    pre_black_kings = 1
+    post_white_kings = 1
+    post_black_kings = 1
+    pre_last_rank_pawns = 0
+    post_last_rank_pawns = 0
+
+by def $transition_certificate(1, 0, 0, 0, 1, 1, 1, 1, 0, 0)

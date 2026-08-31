@@ -1,0 +1,9 @@
+services:
+  litex-chess:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    environment:
+      LITEX_CHESS_TIMEOUT: "45"
+      LITEX_CHESS_INCLUDE_SOURCE: "1"

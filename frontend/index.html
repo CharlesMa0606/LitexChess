@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Litex Chess Studio</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">FORMAL CHESS WORKBENCH</div>
+      <h1>Litex Chess Studio</h1>
+    </div>
+    <div class="topbar-actions">
+      <a class="topbar-link" id="textbookLink" href="/textbook">国际象棋规则教材</a>
+      <div class="engine-pill" id="enginePill">
+        <span class="engine-dot"></span>
+        <span id="engineText">连接 Litex…</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <section class="board-column">
+      <div id="lessonContext" class="lesson-context card" hidden>
+        <div>
+          <div class="eyebrow">TEXTBOOK CONTEXT</div>
+          <h2 id="lessonContextTitle">教材局面</h2>
+          <p id="lessonContextGoal"></p>
+        </div>
+        <a id="lessonContextReturn" class="lesson-context-return" href="/textbook">返回教材</a>
+      </div>
+
+      <div class="toolbar card">
+        <button id="newGameButton">新建标准棋局</button>
+        <button id="flipButton" class="secondary">翻转棋盘</button>
+        <button id="backButton" class="secondary">上一步</button>
+        <button id="forwardButton" class="secondary">主线下一步</button>
+      </div>
+
+      <div class="board-shell card">
+        <div class="turn-strip">
+          <span id="turnLabel">白方行棋</span>
+          <span id="nodeLabel">root</span>
+        </div>
+        <div id="board" class="board" aria-label="国际象棋棋盘"></div>
+      </div>
+
+      <div class="fen-card card">
+        <label for="fenInput">根局面 FEN</label>
+        <div class="inline-form">
+          <input id="fenInput" spellcheck="false" />
+          <button id="loadFenButton">载入</button>
+        </div>
+        <label class="check-row">
+          <input type="checkbox" id="validateRootCheckbox" />
+          同时请求 Litex 证明根局面满足唯一王等结构条件
+        </label>
+      </div>
+    </section>
+
+    <section class="study-column">
+      <div class="card panel">
+        <div class="panel-heading">
+          <div>
+            <div class="eyebrow">MOVE NOTATION</div>
+            <h2>棋谱与变例</h2>
+          </div>
+          <div class="button-group">
+            <button id="importButton" class="secondary">导入 PGN</button>
+            <button id="exportButton" class="secondary">导出 PGN</button>
+          </div>
+        </div>
+        <div id="moveTree" class="move-tree" aria-label="主变与括号变例记谱"></div>
+        <p class="notation-hint">主变按回合纵向排列；同一局面的第一条旁支横向展开，旁支内部的进一步分叉用括号嵌套。</p>
+      </div>
+
+      <div class="card panel receipt-panel">
+        <div class="panel-heading">
+          <div>
+            <div class="eyebrow">PROOF RECEIPT</div>
+            <h2>Litex 判定回执</h2>
+          </div>
+          <span id="receiptBadge" class="receipt-badge neutral">尚未提交</span>
+        </div>
+        <div id="receiptSummary" class="receipt-summary">
+          拖动棋子后，候选前后局面会被转换成 Litex 证明义务；只有全部语句返回 success 才落子。
+        </div>
+        <details id="receiptDetails">
+          <summary>查看诊断与形式化查询</summary>
+          <pre id="receiptOutput"></pre>
+        </details>
+      </div>
+
+      <div class="card panel formal-code-panel">
+        <div class="panel-heading formal-code-heading">
+          <div>
+            <div class="eyebrow">LITEX SOURCE VIEWER</div>
+            <h2>当前形式化代码</h2>
+          </div>
+          <button id="copyFormalButton" class="secondary compact-button" type="button">复制代码</button>
+        </div>
+        <p class="formal-code-intro">“Agent 走法记录”只显示同一真实查询中的 <code>move(e2,e4)</code> 与 <code>result(checkmate)</code> 可读封面；“完整 Litex 证书”继续公开走子形状、稀疏棋盘后继、FEN 元数据、王安全和总合同。</p>
+        <div class="formal-code-tabs" role="tablist" aria-label="Litex 源码类型">
+          <button id="agentSourceTab" class="formal-code-tab active" type="button" role="tab" aria-selected="true" data-source-mode="agent">Agent 走法记录</button>
+          <button id="certificateSourceTab" class="formal-code-tab" type="button" role="tab" aria-selected="false" data-source-mode="certificate">完整 Litex 证书</button>
+          <button id="kernelSourceTab" class="formal-code-tab" type="button" role="tab" aria-selected="false" data-source-mode="kernel">固定规则内核</button>
+        </div>
+        <div class="formal-code-meta" id="formalCodeMeta">尚无本手记录；请落子或选择已有棋谱节点。</div>
+        <div class="formal-code-viewer" id="formalCodeViewer" aria-label="只读 Litex 源码"></div>
+      </div>
+
+      <div class="card panel trust-panel">
+        <div class="eyebrow">FAIL-CLOSED POLICY</div>
+        <h2>规则权威边界</h2>
+        <p>浏览器只产生候选走法，不包含合法走子表。后端只机械构造候选后继局面。Litex 缺失、超时、unknown、解析失败或证明失败都会拒绝落子，不调用其他棋规引擎兜底。</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="pgnDialog">
+    <form method="dialog" class="dialog-card">
+      <div class="panel-heading">
+        <div>
+          <div class="eyebrow">PORTABLE GAME NOTATION</div>
+          <h2 id="pgnDialogTitle">PGN</h2>
+        </div>
+        <button value="cancel" class="icon-button" aria-label="关闭">×</button>
+      </div>
+      <textarea id="pgnTextarea" spellcheck="false"></textarea>
+      <div class="dialog-actions">
+        <span id="pgnHint"></span>
+        <button value="cancel" class="secondary">取消</button>
+        <button id="pgnConfirmButton" value="default">确认</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="/assets/notation.js"></script>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

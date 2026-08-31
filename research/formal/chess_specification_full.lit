@@ -1,0 +1,44 @@
+# Relational chess specification blueprint for Litex Chess Studio.
+# This file is intentionally independent from the finite runtime certificate.
+
+have ChessFile set = closed_range(1, 8)
+have ChessRank set = closed_range(1, 8)
+have PieceCode set = closed_range(-6, 6)
+have SideCode set = {-1, 1}
+
+abstract_prop board_total(board)
+abstract_prop board_value(board, file, rank, piece)
+abstract_prop one_selected_move_shape(tag)
+abstract_prop exact_successor_board(pre_board, post_board, tag)
+abstract_prop moving_king_safe(post_board, moving_side)
+abstract_prop nonmoving_king_safe(pre_board, moving_side)
+abstract_prop castle_transit_safe(pre_board, moving_side, sf, sr, tf, tr)
+
+prop state_metadata(turn, wk, wq, bk, bq, ep_file, ep_rank, halfmove, fullmove Z):
+    turn = 1 or turn = -1
+    wk = 0 or wk = 1
+    wq = 0 or wq = 1
+    bk = 0 or bk = 1
+    bq = 0 or bq = 1
+    ep_file = 0 or 1 <= ep_file <= 8
+    ep_rank = 0 or 1 <= ep_rank <= 8
+    halfmove >= 0
+    fullmove >= 1
+
+prop move_request(sf, sr, tf, tr, promotion Z):
+    1 <= sf <= 8
+    1 <= sr <= 8
+    1 <= tf <= 8
+    1 <= tr <= 8
+    sf != tf or sr != tr
+    promotion = 0 or promotion = 2 or promotion = 3 or promotion = 4 or promotion = 5
+
+prop legal_edge(pre_board, post_board set, moving_side, sf, sr, tf, tr, promotion, shape_tag Z):
+    $board_total(pre_board)
+    $board_total(post_board)
+    $move_request(sf, sr, tf, tr, promotion)
+    moving_side = 1 or moving_side = -1
+    $one_selected_move_shape(shape_tag)
+    $exact_successor_board(pre_board, post_board, shape_tag)
+    $nonmoving_king_safe(pre_board, moving_side)
+    $moving_king_safe(post_board, moving_side)

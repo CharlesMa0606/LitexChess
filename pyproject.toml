@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "litex-chess-studio"
+version = "0.8.0"
+description = "Fail-closed international-chess study board whose move acceptance is decided by Litex"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "Litex Chess Studio contributors"}]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "pydantic>=2.8,<3",
+]
+
+[project.optional-dependencies]
+persistent = [
+  "litexpy==0.0.9",
+]
+dev = [
+  "pytest>=8.2,<10",
+  "httpx>=0.27,<1",
+]
+full = [
+  "litexpy==0.0.9",
+  "pytest>=8.2,<10",
+  "httpx>=0.27,<1",
+]
+
+[project.scripts]
+litex-chess = "litex_chess.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "backend"}
+
+[tool.setuptools.packages.find]
+where = ["backend"]
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["backend/tests"]
+addopts = "-q"

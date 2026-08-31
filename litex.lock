@@ -1,0 +1,5 @@
+# Reproducible Litex verifier pin used by scripts/bootstrap_litex.sh.
+repository = "https://github.com/litexlang/golitex.git"
+release = "0.9.116-beta"
+commit = "e049fabc6d941eb2dee480bfbde50a450b58a3c2"
+litexpy = "0.0.9"

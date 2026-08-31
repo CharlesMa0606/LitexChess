@@ -1,0 +1,419 @@
+# Litex Chess Studio 国际象棋规则教材（自动同步的中文注释镜像）
+#
+# 单一事实源与运行边界：
+# 1. 实际落子只加载 formal/chess_rules.lit；本教材不替换运行时内核。
+# 2. 本文件由 scripts/sync_textbook_core.py 生成。前 8 个源码模块只在核心原文周围
+#    插入中文注释和章节标记；所有非注释 Litex 行与核心逐行一致。
+# 3. examples 模块位于显式边界之后，只包含固定教学正例。
+# 4. 网页教材按 15 章、6 部组织，并通过同一工作台与 Litex 门禁完成局面和残局训练。
+# 5. Agent 视图显示同一次查询中真正被检查的 move(...)、result(...) 可读封面；
+#    完整证书视图继续公开稀疏棋盘、元数据、王安全与总合同。
+#
+
+# [chapter:encoding:start]
+# 源码模块 A　局面、格名与 Agent 走法记录
+#
+# 局面首先由完整 Position 表示，而不是只有一张棋盘图片。核心在这里定义
+# 棋盘坐标、棋子编码、通用 square(file, rank, index) 映射，以及 move/result
+# 接口。每条查询只为本手涉及的格子和结果创建局部可读别名：
+#
+#     have e2 Z = 12
+#     have e4 Z = 28
+#     have ongoing Z = 0
+#     by def $square(5, 2, e2)
+#     by def $square(5, 4, e4)
+#     by def $move(e2, e4)
+#     by def $result(ongoing)
+#
+# result_witness(ongoing, 0, 20) 位于详细证书中，给出将军者数量与合法应对数。
+# 这样无需在内核中永久维护 a1--h8 的 64 个全局常量。可读封面与后面的
+# 详细证书属于同一次 Litex 事务；后续任一事实失败，整手棋都不会被提交。
+
+# Litex Chess Studio certificate kernel.
+#
+# The runtime submits concrete integer witnesses to these predicates. Litex
+# unfolds the selected predicate with `by def` and checks every clause.
+#
+# Important boundary: Python mechanically constructs a candidate successor and
+# independently computes the expected sparse board delta, FEN metadata,
+# path-blocker counts, and king-attack counts. Litex checks the resulting concrete equalities and
+# rule clauses. The Python certificate compiler is therefore part of the
+# documented trusted computing base; it does not return the final acceptance
+# bit, but a bug in its witnesses could affect what Litex is asked to verify.
+
+
+
+# --------------------------------------------------------------------------
+# Agent-facing move record vocabulary
+# --------------------------------------------------------------------------
+# The runtime query creates only the two algebraic-square aliases used by the
+# current move (for example ``have e2 Z = 12``).  The generic square predicate
+# proves that each readable alias is exactly the corresponding board index.
+# Likewise, the query creates one local result-name alias such as
+# ``have checkmate Z = 2``.  This avoids keeping 64 global square constants in
+# the runtime kernel while preserving readable verified records.
+
+prop square(file, rank, index Z):
+    1 <= file <= 8
+    1 <= rank <= 8
+    index = (rank - 1) * 8 + (file - 1)
+
+prop move(from_square, to_square Z):
+    0 <= from_square < 64
+    0 <= to_square < 64
+    from_square != to_square
+
+prop promotion_choice(promotion Z):
+    promotion = 0 or promotion = 2 or promotion = 3 or promotion = 4 or promotion = 5
+
+# Result codes: ongoing=0, check=1, checkmate=2, stalemate=3,
+# unclassified=4. The short result predicate is the Agent-facing status record;
+# result_witness is the detailed finite evidence used by the audit certificate.
+prop result(status Z):
+    status = 0 or status = 1 or status = 2 or status = 3 or status = 4
+
+prop result_witness(status, checker_count, legal_reply_count Z):
+    status = 0 and checker_count = 0 and legal_reply_count > 0 or status = 1 and checker_count > 0 and legal_reply_count > 0 or status = 2 and checker_count > 0 and legal_reply_count = 0 or status = 3 and checker_count = 0 and legal_reply_count = 0 or status = 4 and checker_count = -1 and legal_reply_count = -1
+# [chapter:encoding:end]
+
+# [chapter:lifecycle:start]
+# 源码模块 B　一手棋的前置条件与棋盘后继接口
+#
+# 浏览器只提交 from/to/promotion。candidate.py 机械构造候选 Position，
+# query.py 独立重算形状、局部变更、元数据和王安全证书，Litex 最后决定是否接受。
+#
+# 本段只保留当前走法真正需要的坐标、棋子归属与路径前置条件。棋盘后继不再
+# 维护一套 64 格逐项相等接口；模块 H 使用 2--4 个稀疏编辑和精确全盘码，直接表达
+# “本手究竟修改了哪些格子”。
+
+prop coordinate(file, rank Z):
+    1 <= file <= 8
+    1 <= rank <= 8
+
+prop piece_code(piece Z):
+    -6 <= piece <= 6
+
+prop side_code(side Z):
+    side = 1 or side = -1
+
+prop moving_piece(source, side Z):
+    side = 1 or side = -1
+    source * side > 0
+    1 <= abs(source) <= 6
+
+prop path_clear(path_blockers Z):
+    path_blockers = 0
+
+# Piece geometry and special-move predicates.
+# [chapter:lifecycle:end]
+
+# [chapter:pawn:start]
+# 源码模块 C　兵的五类走法
+#
+# 兵必须分开处理单步、初始双步、斜吃、升变和吃过路兵。白兵 side=1，
+# 黑兵 side=-1，使前进方向可以用同一组整数关系表达。迷你棋盘实验会同时展示目标格、
+# 双步经过格、过路兵被删除格以及升变选择，避免把规则压缩成一句无法理解的调用。
+
+prop pawn_single_move(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target = 0
+    promotion = 0
+    tf = sf
+    tr = sr + side
+    side = 1 and tr <= 7 or side = -1 and tr >= 2
+
+prop pawn_double_move(source, target, middle, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target = 0
+    middle = 0
+    promotion = 0
+    tf = sf
+    side = 1 and sr = 2 and tr = 4 or side = -1 and sr = 7 and tr = 5
+
+prop pawn_capture(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target * side < 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = 1
+    tr = sr + side
+    side = 1 and tr <= 7 or side = -1 and tr >= 2
+
+prop pawn_promotion(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = side
+    promotion = 2 or promotion = 3 or promotion = 4 or promotion = 5
+    tr = sr + side
+    side = 1 and tr = 8 or side = -1 and tr = 1
+    target = 0 and tf = sf or target * side < 0 and abs(target) != 6 and abs(tf - sf) = 1
+
+prop en_passant_move(source, target, captured, side, sf, sr, tf, tr, ep_file, ep_rank, promotion Z):
+    side = 1 or side = -1
+    source = side
+    target = 0
+    captured = -side
+    promotion = 0
+    abs(tf - sf) = 1
+    tr = sr + side
+    tf = ep_file
+    tr = ep_rank
+# [chapter:pawn:end]
+
+# [chapter:pieces:start]
+# 源码模块 D　马、象、车、后与王
+#
+# 马只检查 (1,2)/(2,1) 的坐标差；象、车、后还需要宿主侧给出的路径阻挡数为零；
+# 王的一步几何与“走后是否受攻击”分层检查。这样可以清楚区分：几何上像一手棋，
+# 与整手棋在完整局面中合法，是两个不同命题。
+
+prop knight_move(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = 2 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = 1 and abs(tr - sr) = 2 or abs(tf - sf) = 2 and abs(tr - sr) = 1
+
+prop bishop_move(source, target, side, sf, sr, tf, tr, path_blockers, promotion Z):
+    side = 1 or side = -1
+    source = 3 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = abs(tr - sr)
+    tf != sf
+    path_blockers = 0
+
+prop rook_move(source, target, side, sf, sr, tf, tr, path_blockers, promotion Z):
+    side = 1 or side = -1
+    source = 4 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    sf = tf and sr != tr or sr = tr and sf != tf
+    path_blockers = 0
+
+prop queen_move(source, target, side, sf, sr, tf, tr, path_blockers, promotion Z):
+    side = 1 or side = -1
+    source = 5 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) = abs(tr - sr) and tf != sf or sf = tf and sr != tr or sr = tr and sf != tf
+    path_blockers = 0
+
+prop king_step(source, target, side, sf, sr, tf, tr, promotion Z):
+    side = 1 or side = -1
+    source = 6 * side
+    target * side <= 0
+    abs(target) != 6
+    promotion = 0
+    abs(tf - sf) <= 1
+    abs(tr - sr) <= 1
+    abs(tf - sf) + abs(tr - sr) > 0
+# [chapter:pieces:end]
+
+# [chapter:castling:start]
+# 源码模块 E　王车易位
+#
+# 易位依赖历史权利、路径占用以及起点/经过格/终点的王安全。王或原始角车移动后，
+# 权利永久删除；即使棋子回到原位也不会恢复。四个谓词分别处理双方王翼与后翼易位，
+# 而 FEN 的 KQkq 字段承担这部分不可从棋盘摆放恢复的历史记忆。
+
+prop white_kingside_castle(source, f1_piece, g1_piece, h1_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = 6
+    f1_piece = 0
+    g1_piece = 0
+    h1_piece = 4
+    right = 1
+    sf = 5
+    sr = 1
+    tf = 7
+    tr = 1
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+prop white_queenside_castle(source, b1_piece, c1_piece, d1_piece, a1_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = 6
+    b1_piece = 0
+    c1_piece = 0
+    d1_piece = 0
+    a1_piece = 4
+    right = 1
+    sf = 5
+    sr = 1
+    tf = 3
+    tr = 1
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+prop black_kingside_castle(source, f8_piece, g8_piece, h8_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = -6
+    f8_piece = 0
+    g8_piece = 0
+    h8_piece = -4
+    right = 1
+    sf = 5
+    sr = 8
+    tf = 7
+    tr = 8
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+
+prop black_queenside_castle(source, b8_piece, c8_piece, d8_piece, a8_piece, right, sf, sr, tf, tr, promotion, start_safe, transit_safe, end_safe Z):
+    source = -6
+    b8_piece = 0
+    c8_piece = 0
+    d8_piece = 0
+    a8_piece = -4
+    right = 1
+    sf = 5
+    sr = 8
+    tf = 3
+    tr = 8
+    promotion = 0
+    start_safe = 1
+    transit_safe = 1
+    end_safe = 1
+# [chapter:castling:end]
+
+# [chapter:safety:start]
+# 源码模块 F　攻击关系、王安全与结构不变量
+#
+# 当前具体运行时由 Python 枚举攻击者并传入计数，Litex 检查 king_safe 所需的
+# “唯一王且不安全攻击者为零”。更抽象的 attack-relation 试验已移到 research/formal，
+# 不会与生产棋规混在一起。绝对牵制、闪将、双将等教学标签来自同一攻击扫描，
+# 但不会另行改写合法性。
+
+# The concrete runtime currently computes attacking pieces in the Python
+# certificate compiler and submits only the aggregate count below.  More
+# abstract attack-relation experiments live under research/formal/ and are not
+# part of the production rule kernel.
+
+prop king_safe(king_count, unsafe_attacker_count Z):
+    king_count = 1
+    unsafe_attacker_count = 0
+
+prop admissible_position(white_king_count, black_king_count, last_rank_pawn_count, side Z):
+    white_king_count = 1
+    black_king_count = 1
+    last_rank_pawn_count = 0
+    side = 1 or side = -1
+# [chapter:safety:end]
+
+# [chapter:metadata:start]
+# 源码模块 G　FEN 元数据更新
+#
+# 一手棋除了改变棋盘，还必须更新行棋方、KQkq、过路兵目标、halfmove 与 fullmove。
+# metadata_transition 对候选值和独立期望值逐项做等式检查。重复局面、五十回合等跨节点
+# 规则则在已提交 Position 的历史时间线上计算，不能由当前单手的局部谓词代替。
+
+prop metadata_transition(actual_turn, expected_turn, actual_wk, expected_wk, actual_wq, expected_wq, actual_bk, expected_bk, actual_bq, expected_bq, actual_ep_file, expected_ep_file, actual_ep_rank, expected_ep_rank, actual_halfmove, expected_halfmove, actual_fullmove, expected_fullmove Z):
+    actual_turn = expected_turn
+    actual_wk = expected_wk
+    actual_wq = expected_wq
+    actual_bk = expected_bk
+    actual_bq = expected_bq
+    actual_ep_file = expected_ep_file
+    actual_ep_rank = expected_ep_rank
+    actual_halfmove = expected_halfmove
+    actual_fullmove = expected_fullmove
+# [chapter:metadata:end]
+
+# [chapter:contract:start]
+# 源码模块 H　总合同与精确稀疏棋盘变更
+#
+# 生产表示把棋盘视为不可变对象。一手普通着只列出源格和目标格，吃过路兵列出三格，
+# 易位列出四格。每格编辑给出 (after-before)*16^index 的精确贡献；所有贡献必须把走前
+# 全盘的无碰撞十六进制编码变成实际走后编码。由此排除未登记的第五个改动，而无需每次
+# 逐格复述其余 60--62 个不变格。legal_transition 再汇总形状、棋盘、元数据和王安全。
+
+prop legal_transition(shape_certificate_count, metadata_mismatch_count, unsafe_attacker_count, pre_white_king_count, pre_black_king_count, post_white_king_count, post_black_king_count, pre_last_rank_pawn_count, post_last_rank_pawn_count Z):
+    shape_certificate_count = 1
+    metadata_mismatch_count = 0
+    unsafe_attacker_count = 0
+    pre_white_king_count = 1
+    pre_black_king_count = 1
+    post_white_king_count = 1
+    post_black_king_count = 1
+    pre_last_rank_pawn_count = 0
+    post_last_rank_pawn_count = 0
+
+
+# --------------------------------------------------------------------------
+# Exact sparse board transition (only production board contract)
+# --------------------------------------------------------------------------
+# A legal chess move changes only 2, 3 or 4 cells.  The visible board remains
+# a 64-cell object, but its transition is represented by local edits and an
+# injective base-16 integer code.  Each piece code p in [-6,6] is stored as
+# digit p+6 in [0,12].  This is an exact encoding, not a hash.
+
+prop sparse_square_edit(index, before_piece, after_piece, weight, contribution Z):
+    0 <= index
+    index < 64
+    -6 <= before_piece
+    before_piece <= 6
+    -6 <= after_piece
+    after_piece <= 6
+    weight = 16^index
+    contribution = (after_piece - before_piece) * weight
+
+prop sparse_board_transition(before_code, after_code, contribution1, contribution2, contribution3, contribution4, edit_count, duplicate_count, before_mismatch_count, after_mismatch_count Z):
+    2 <= edit_count
+    edit_count <= 4
+    duplicate_count = 0
+    before_mismatch_count = 0
+    after_mismatch_count = 0
+    after_code = before_code + contribution1 + contribution2 + contribution3 + contribution4
+# [chapter:contract:end]
+
+# [chapter:examples:start]
+# 源码模块 I　定义级显微镜与 Agent 可读封面
+#
+# 这些 by def 只展示单个谓词如何展开；完整落子还需要同一查询中的棋子形状、
+# 稀疏棋盘后继、FEN 元数据、王安全和最终总合同。网页的“局面实验室”和
+# “互动残局训练”会走与工作台完全相同的接口。
+
+# e2-e4 的 Agent 可读封面。格名与结果名都是本次查询的局部别名。
+have e2 Z = 12
+have e4 Z = 28
+have ongoing Z = 0
+by def $square(5, 2, e2)
+by def $square(5, 4, e4)
+by def $move(e2, e4)
+by def $result(ongoing)
+by def $result_witness(ongoing, 0, 20)
+
+# 初始局面 e2-e4 的兵双步局部形状。
+by def $pawn_double_move(1, 0, 0, 1, 5, 2, 5, 4, 0)
+
+# g1-f3 的白马局部形状。
+by def $knight_move(2, 0, 1, 7, 1, 6, 3, 0)
+
+# 两个局部编辑可组成精确棋盘增量（这里用小整数示意）。
+by def $sparse_square_edit(0, 4, 0, 1, -4)
+by def $sparse_square_edit(1, 0, 4, 16, 64)
+by def $sparse_board_transition(100, 160, -4, 64, 0, 0, 2, 0, 0, 0)
+
+# 白方短易位的局部参数全部满足。
+by def $white_kingside_castle(6, 0, 0, 4, 1, 5, 1, 7, 1, 0, 1, 1, 1)
+
+# FEN 元数据候选值与期望值逐项一致。
+by def $metadata_transition(-1, -1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 5, 3, 3, 0, 0, 1, 1)
+
+# 最终总合同全部汇总为零差异。
+by def $legal_transition(1, 0, 0, 1, 1, 1, 1, 0, 0)
+# [chapter:examples:end]
+
+# 阅读顺序：Agent 记录 → 走子形状 → 2--4 个稀疏编辑与精确全盘码 →
+# FEN 元数据 → 王安全 → legal_transition。终局与历史结论还要查看合法着集合、
+# 重复身份键和回合计数器；它们不会被一条 move(...) 语句偷换掉。
