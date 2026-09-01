@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Regenerate the Chinese textbook mirror from the canonical Litex kernel.
+"""Regenerate all rule mirrors from the canonical Litex kernel.
 
-The runtime kernel is the single source of truth.  This script inserts Chinese
+The runtime kernel is the single source of truth.  This script copies it into the
+native golitex textbook overlay and inserts Chinese
 teaching commentary and source-module markers *around* contiguous slices of the
 kernel; it never retypes or edits a core Litex statement.  Consequently the
 non-comment lines before the explicit examples boundary are byte-for-byte equal
@@ -15,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / "formal" / "chess_rules.lit"
 TEXTBOOK = ROOT / "textbook" / "chess_rules_textbook_cn.lit"
+OVERLAY_RULE = ROOT / "integration" / "golitex-overlay" / "textbooks" / "Chess" / "chess_rules.lit"
 
 MODULES = [
     (
@@ -215,14 +217,25 @@ def main() -> int:
     args = parser.parse_args()
     generated = generate()
     current = TEXTBOOK.read_text(encoding="utf-8") if TEXTBOOK.exists() else ""
+    core = CORE.read_text(encoding="utf-8")
+    overlay = OVERLAY_RULE.read_text(encoding="utf-8") if OVERLAY_RULE.exists() else ""
     if args.check:
+        stale: list[str] = []
         if current != generated:
-            print("textbook_mirror=STALE")
+            stale.append("textbook/chess_rules_textbook_cn.lit")
+        if overlay != core:
+            stale.append("integration/golitex-overlay/textbooks/Chess/chess_rules.lit")
+        if stale:
+            print("rule_mirrors=STALE " + ", ".join(stale))
             return 1
-        print("textbook_mirror=SYNC")
+        print("rule_mirrors=SYNC textbook+native-overlay")
         return 0
+    TEXTBOOK.parent.mkdir(parents=True, exist_ok=True)
+    OVERLAY_RULE.parent.mkdir(parents=True, exist_ok=True)
     TEXTBOOK.write_text(generated, encoding="utf-8")
+    OVERLAY_RULE.write_text(core, encoding="utf-8")
     print(f"wrote {TEXTBOOK.relative_to(ROOT)} ({len(generated.splitlines())} lines)")
+    print(f"wrote {OVERLAY_RULE.relative_to(ROOT)} ({len(core.splitlines())} lines)")
     return 0
 
 

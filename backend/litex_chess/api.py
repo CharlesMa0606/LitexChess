@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -41,6 +41,7 @@ TEXTBOOK_ROOT = PROJECT_ROOT / "textbook"
 TEXTBOOK_SOURCE = TEXTBOOK_ROOT / "chess_rules_textbook_cn.lit"
 TEXTBOOK_CATALOG = TEXTBOOK_ROOT / "chapters.json"
 CORE_FORMAL_PATH = PROJECT_ROOT / "formal" / "chess_rules.lit"
+INTEGRATED_SITE_INDEX = FRONTEND_ROOT / "site" / "index.html"
 
 
 class NewSessionRequest(BaseModel):
@@ -171,6 +172,24 @@ def create_app() -> FastAPI:
             raise HTTPException(
                 status_code=500, detail=f"textbook metadata error: {exc}"
             ) from exc
+
+    @app.get("/api/textbook/catalog")
+    def textbook_catalog() -> dict[str, Any]:
+        """Return the book manifest for Litex-site native navigation."""
+
+        try:
+            return json.loads(TEXTBOOK_CATALOG.read_text(encoding="utf-8"))
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=500, detail=f"cannot read textbook catalog: {exc}") from exc
+
+    @app.get("/api/textbook/source", response_class=PlainTextResponse)
+    def textbook_source() -> str:
+        """Return the generated Chinese Litex textbook source."""
+
+        try:
+            return TEXTBOOK_SOURCE.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail=f"cannot read textbook source: {exc}") from exc
 
     @app.post("/api/textbook/verify")
     def verify_textbook() -> dict[str, Any]:
@@ -399,15 +418,44 @@ def create_app() -> FastAPI:
         )
 
     if FRONTEND_ROOT.exists():
+        # `/extensions/chess` is the production-oriented site-extension path.
+        # `/assets` remains only for the standalone compatibility pages.
+        app.mount(
+            "/extensions/chess",
+            StaticFiles(directory=FRONTEND_ROOT),
+            name="chess-extension-assets",
+        )
         app.mount("/assets", StaticFiles(directory=FRONTEND_ROOT), name="assets")
 
-        @app.get("/")
-        def index() -> FileResponse:
+        def integrated_site() -> FileResponse:
+            return FileResponse(INTEGRATED_SITE_INDEX)
+
+        @app.get("/textbook/Chess", include_in_schema=False)
+        @app.get("/textbook/Chess/", include_in_schema=False)
+        @app.get("/textbook/Chess/{chapter_slug}", include_in_schema=False)
+        def chess_textbook_site(chapter_slug: str | None = None) -> FileResponse:
+            del chapter_slug
+            return integrated_site()
+
+        @app.get("/playground/chess", include_in_schema=False)
+        def chess_playground_site() -> FileResponse:
+            return integrated_site()
+
+        @app.get("/standalone/workbench", include_in_schema=False)
+        def standalone_workbench() -> FileResponse:
             return FileResponse(FRONTEND_ROOT / "index.html")
 
-        @app.get("/textbook")
-        def textbook_index() -> FileResponse:
+        @app.get("/standalone/textbook", include_in_schema=False)
+        def standalone_textbook() -> FileResponse:
             return FileResponse(FRONTEND_ROOT / "textbook.html")
+
+        @app.get("/textbook", include_in_schema=False)
+        def textbook_redirect() -> RedirectResponse:
+            return RedirectResponse(url="/textbook/Chess", status_code=307)
+
+        @app.get("/", include_in_schema=False)
+        def index() -> RedirectResponse:
+            return RedirectResponse(url="/textbook/Chess", status_code=307)
 
     return app
 

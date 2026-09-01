@@ -1,0 +1,4 @@
+[book]
+Chess
+100%
+"Native Litex source plus a no-iframe interactive textbook extension. Re-run the integration compatibility gate when the website loader changes."

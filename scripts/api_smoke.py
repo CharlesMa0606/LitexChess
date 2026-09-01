@@ -17,14 +17,43 @@ def main() -> int:
         health = client.get("/api/health")
         health.raise_for_status()
         assert health.json()["gate"]["ready"] is True
-        assert health.json()["version"] == "0.8.0"
+        assert health.json()["version"] == "0.9.0"
 
-        index = client.get("/")
-        index.raise_for_status()
-        assert "Litex Chess Studio" in index.text
-        assert "/assets/notation.js" in index.text
-        assert "当前形式化代码" in index.text
-        assert "formalCodeViewer" in index.text
+        index = client.get("/", follow_redirects=False)
+        assert index.status_code == 307
+        assert index.headers["location"] == "/textbook/Chess"
+
+        integrated = client.get("/textbook/Chess/position-state")
+        integrated.raise_for_status()
+        assert "litex-site-header" in integrated.text
+        assert "litex-site-sidebar" in integrated.text
+        assert "/extensions/chess/site/site.js" in integrated.text
+        assert "<iframe" not in integrated.text.lower()
+
+        workbench_route = client.get("/textbook/Chess/workbench")
+        workbench_route.raise_for_status()
+        assert "litex-site-header" in workbench_route.text
+
+        extension_entry = client.get("/extensions/chess/embed/litex-chess-elements.js")
+        extension_entry.raise_for_status()
+        assert 'customElements.define("litex-chess-textbook"' in extension_entry.text
+        assert 'customElements.define("litex-chess-workbench"' in extension_entry.text
+
+        workbench_fragment = client.get("/extensions/chess/embed/fragments/workbench.html")
+        workbench_fragment.raise_for_status()
+        assert "当前形式化代码" in workbench_fragment.text
+        assert 'class="topbar"' not in workbench_fragment.text
+
+        textbook_fragment = client.get("/extensions/chess/embed/fragments/textbook.html")
+        textbook_fragment.raise_for_status()
+        assert "局面实验室" in textbook_fragment.text
+        assert "book-topbar" not in textbook_fragment.text
+        assert "book-sidebar" not in textbook_fragment.text
+
+        standalone = client.get("/standalone/workbench")
+        standalone.raise_for_status()
+        assert "/assets/controllers/workbench.js" in standalone.text
+        assert "formalCodeViewer" in standalone.text
 
         formal_source = client.get("/api/formal/source")
         formal_source.raise_for_status()
@@ -36,7 +65,11 @@ def main() -> int:
         assert "prop board_rank_transition" not in formal_payload["source"]
         assert len(formal_payload["sha256"]) == 64
 
-        textbook_page = client.get("/textbook")
+        textbook_redirect = client.get("/textbook", follow_redirects=False)
+        assert textbook_redirect.status_code == 307
+        assert textbook_redirect.headers["location"] == "/textbook/Chess"
+
+        textbook_page = client.get("/standalone/textbook")
         textbook_page.raise_for_status()
         assert "Litex 国际象棋规则教材" in textbook_page.text
         assert "局面实验室" in textbook_page.text
@@ -45,7 +78,14 @@ def main() -> int:
         assert "status-lab-grid" in textbook_page.text
         assert "history-lab-grid" in textbook_page.text
         assert "endgameLabsSection" in textbook_page.text
-        assert "v08_integration" not in textbook_page.text
+        assert "/assets/controllers/textbook.js" in textbook_page.text
+
+        textbook_catalog = client.get("/api/textbook/catalog")
+        textbook_catalog.raise_for_status()
+        assert len(textbook_catalog.json()["chapters"]) == 15
+        textbook_source = client.get("/api/textbook/source")
+        textbook_source.raise_for_status()
+        assert "Litex Chess Studio 国际象棋规则教材" in textbook_source.text
 
         textbook_status = client.get("/api/textbook/status")
         textbook_status.raise_for_status()
@@ -81,7 +121,7 @@ def main() -> int:
         rook_payload = rook_lesson.json()
         assert rook_payload["finished"] is False
         assert rook_payload["legal_moves"]
-        assert rook_payload["workbench_url"].startswith("/?fen=")
+        assert rook_payload["workbench_url"].startswith("/textbook/Chess/workbench?fen=")
 
         textbook_verify = client.post("/api/textbook/verify", json={})
         textbook_verify.raise_for_status()

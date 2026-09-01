@@ -1,0 +1,31 @@
+# Chapter 15: Agent 走法记录、完整证书与可信边界
+# @litex-site-route /textbook/Chess/certificate-audit
+# @litex-web-component litex-chess-textbook chapter=certificate-audit
+
+"""
+把 move(e2,e4) 与明确的 result(...) 作为可读封面，随后展开稀疏棋盘、元数据、王安全和最终接受合同。
+
+学习目标：
+- 区分 Agent 可读走法记录与完整形式化证书。
+- 理解稀疏棋盘后继、元数据与王安全各自承担的责任。
+- 明确 Python 证书编译器与 Litex 核验器之间的可信边界。
+
+总合同不是魔法入口
+legal_transition 只汇总此前算出的 mismatch 与 unsafe 计数。若形状、路径或安全调用失败，整份 Litex 运行就不会被接受。
+
+源码审计要同时看定义和实例
+固定规则内核给出可复用谓词；本手证书把当前棋盘、路径、攻击计数和期望后继代入这些谓词。只看其中一边都不足以理解验证。
+
+当前可信计算基
+Python 仍负责候选构造、形状选择、路径与攻击扫描、期望状态和状态集合汇总；Litex 核验被编译出的具体事实。后续研究方向是把更多通用后继关系和攻击关系下沉到 Litex。
+
+本文件是 Litex 原生教材的可验证回退层。网页上的棋盘、局面实验、源码查看器和残局训练
+由无 iframe 的 Chess Web Component 挂载到同一个教材路由中；下面的语句仍可由 Litex
+项目运行器独立检查，因此即使交互扩展未加载，本章也不是一张纯静态网页。
+"""
+
+# 本章的最小可执行检查。完整局面证书由交互扩展的后端按每一手棋生成。
+by def $rules::sparse_square_edit(0, 1, 0, 1, -1)
+by def $rules::sparse_square_edit(1, 0, 1, 16, 16)
+by def $rules::sparse_board_transition(100, 115, -1, 16, 0, 0, 2, 0, 0, 0)
+by def $rules::legal_transition(1, 0, 0, 1, 1, 1, 1, 0, 0)

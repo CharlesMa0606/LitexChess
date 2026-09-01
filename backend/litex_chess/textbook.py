@@ -541,8 +541,8 @@ class TextbookRuntime:
         except KeyError as exc:
             raise KeyError(f"unknown textbook board lab: {lab_id}") from exc
         public = {key: value for key, value in lab.items() if key != "moves_by_id"}
-        public["workbench_url"] = f"/?lab={lab_id}&return=/textbook#chapter-{public['chapter']}"
-        public["textbook_url"] = f"/textbook#chapter-{public['chapter']}"
+        public["workbench_url"] = f"/textbook/Chess/workbench?lab={lab_id}&return=/textbook/Chess/{public['chapter']}"
+        public["textbook_url"] = f"/textbook/Chess/{public['chapter']}"
         return public
 
     def status(self) -> dict[str, Any]:

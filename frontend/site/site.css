@@ -1,0 +1,80 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #292d29;
+  background: #f7f8f6;
+  font-synthesis: none;
+  --site-green: #397c31;
+  --site-green-soft: #edf5e9;
+  --site-line: #e3e7e1;
+  --site-muted: #7b8279;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-height: 100vh; background: #f7f8f6; }
+a { color: inherit; }
+.litex-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 270px minmax(360px, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--site-line);
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(14px);
+}
+.site-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.site-logo { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #cadbc4; background: #f2f7ef; color: var(--site-green); font-size: 24px; }
+.site-brand-copy { display: flex; flex-direction: column; min-width: 0; }
+.site-brand-copy strong { font-size: 15px; }
+.site-brand-copy small { margin-top: 2px; color: var(--site-muted); font-size: 9px; white-space: nowrap; }
+.site-primary-nav { height: 64px; display: flex; align-items: stretch; gap: 4px; }
+.site-primary-nav a { position: relative; display: inline-flex; align-items: center; padding: 0 18px; color: #525852; text-decoration: none; font-size: 13px; font-weight: 680; }
+.site-primary-nav a.active { color: var(--site-green); }
+.site-primary-nav a.active::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 2px; background: var(--site-green); }
+.site-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.workbench-shortcut { min-height: 36px; display: inline-flex; align-items: center; padding: 7px 12px; border: 1px solid #dce5d8; border-radius: 8px; color: #39712f; background: #f8fbf6; text-decoration: none; font-size: 11px; font-weight: 780; }
+.site-runtime { min-height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--site-line); border-radius: 999px; color: #5f675d; background: #fff; font-size: 10px; }
+.site-runtime i { width: 8px; height: 8px; border-radius: 50%; background: #d0a13b; box-shadow: 0 0 0 4px rgba(208,161,59,.12); }
+.site-runtime.ready i { background: #42ad68; box-shadow: 0 0 0 4px rgba(66,173,104,.12); }
+.site-runtime.failed i { background: #d6606e; box-shadow: 0 0 0 4px rgba(214,96,110,.12); }
+.site-runtime b { font-weight: 650; }
+.litex-site-layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: calc(100vh - 64px); }
+.litex-site-sidebar { position: sticky; top: 64px; align-self: start; height: calc(100vh - 64px); overflow: auto; padding: 28px 20px 40px; border-right: 1px solid var(--site-line); background: #fbfcfa; }
+.sidebar-title { display: flex; align-items: center; gap: 10px; padding: 0 8px 18px; }
+.sidebar-title > span { color: var(--site-green); font-size: 20px; }
+.sidebar-title div { display: flex; flex-direction: column; }
+.sidebar-title strong { font-size: 15px; }
+.sidebar-title small { margin-top: 3px; color: var(--site-muted); font-size: 10px; }
+.site-chapter-part { margin: 18px 8px 7px; color: #9a9f98; font-size: 9px; font-weight: 820; letter-spacing: .08em; text-transform: uppercase; }
+.site-chapter-nav a { display: grid; grid-template-columns: 34px minmax(0,1fr); align-items: start; gap: 5px; margin: 2px 0; padding: 9px 10px; border-radius: 8px; color: #505650; text-decoration: none; font-size: 11px; line-height: 1.45; }
+.site-chapter-nav a span { color: #99a096; font-variant-numeric: tabular-nums; }
+.site-chapter-nav a.active { color: #2f6b29; background: #eaf3e6; font-weight: 760; }
+.site-chapter-nav a.active span { color: #3f8537; }
+.site-workbench-nav { margin: 18px 0 0; border-top: 1px solid var(--site-line); padding-top: 12px; }
+.site-extension-note { margin: 28px 8px 0; padding: 14px; border: 1px solid #dfe8dc; border-radius: 9px; background: #f4f8f2; }
+.site-extension-note strong { color: #39712f; font-size: 10px; }
+.site-extension-note p { margin: 7px 0 0; color: #727b70; font-size: 10px; line-height: 1.55; }
+.litex-site-main { min-width: 0; padding: 28px clamp(24px, 4vw, 68px) 80px; background: #fff; }
+.site-loading, .site-error { max-width: 760px; margin: 80px auto; padding: 24px; border: 1px solid var(--site-line); border-radius: 10px; color: var(--site-muted); background: #fff; text-align: center; }
+litex-chess-textbook, litex-chess-workbench { display: block; width: 100%; }
+@media (max-width: 980px) {
+  .litex-site-header { grid-template-columns: auto 1fr auto; padding: 0 14px; }
+  .site-brand-copy small { display: none; }
+  .site-primary-nav a { padding-inline: 10px; }
+  .site-runtime { display: none; }
+  .litex-site-layout { grid-template-columns: 250px minmax(0,1fr); }
+  .litex-site-main { padding: 24px 20px 60px; }
+}
+@media (max-width: 720px) {
+  .litex-site-header { grid-template-columns: 1fr auto; }
+  .site-primary-nav { display: none; }
+  .workbench-shortcut { font-size: 0; }
+  .workbench-shortcut::after { content: "棋盘"; font-size: 11px; }
+  .litex-site-layout { display: block; }
+  .litex-site-sidebar { position: relative; top: auto; width: auto; height: auto; max-height: 300px; border-right: 0; border-bottom: 1px solid var(--site-line); }
+  .litex-site-main { padding: 20px 14px 50px; }
+}

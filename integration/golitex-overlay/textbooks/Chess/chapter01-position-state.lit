@@ -1,0 +1,28 @@
+# Chapter 1: 完整局面：棋盘、轮次、权利与 FEN
+# @litex-site-route /textbook/Chess/position-state
+# @litex-web-component litex-chess-textbook chapter=position-state
+
+"""
+先建立正确对象：国际象棋局面不是一张静态图片，而是棋子摆放与历史相关字段组成的完整 Position。
+
+学习目标：
+- 能从 FEN 的六个字段还原局面含义。
+- 理解易位权、过路兵目标无法仅由棋子摆放恢复。
+- 区分内部整数编码、Position 与 FEN 序列化。
+
+从棋盘图片升级到局面对象
+相同的 64 格摆放可以对应不同的合法走法集合。王或角车是否曾经移动、上一手是否刚完成兵双步，都会改变当前权利。 因此引擎保存 board、turn、castling、ep_square、halfmove、fullmove，而不是每一步只重新看棋子在哪里。
+
+FEN 是序列化，不是另一个棋规引擎
+每次候选状态更新完成后，Position.fen 把六个字段写成文本。FEN 负责记录，不负责证明这一手合法。 教材中的走前、候选 after、期望 after 三份 FEN 可以帮助逐项审计状态演化。
+
+本文件是 Litex 原生教材的可验证回退层。网页上的棋盘、局面实验、源码查看器和残局训练
+由无 iframe 的 Chess Web Component 挂载到同一个教材路由中；下面的语句仍可由 Litex
+项目运行器独立检查，因此即使交互扩展未加载，本章也不是一张纯静态网页。
+"""
+
+# 本章的最小可执行检查。完整局面证书由交互扩展的后端按每一手棋生成。
+by def $rules::coordinate(5, 2)
+by def $rules::square(5, 2, 12)
+by def $rules::piece_code(6)
+by def $rules::side_code(-1)

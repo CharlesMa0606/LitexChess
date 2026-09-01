@@ -1,0 +1,31 @@
+# Chapter 2: 一手棋的可读记录、完整证书与稀疏后继
+# @litex-site-route /textbook/Chess/move-pipeline
+# @litex-web-component litex-chess-textbook chapter=move-pipeline
+
+"""
+从 Agent 可读的 move(e2,e4) 与 result(...) 出发，再展开机械候选、稀疏棋盘编辑、元数据、王安全和最终提交。
+
+学习目标：
+- 理解 Agent 记录与完整证明义务属于同一次 Litex 事务。
+- 说清 candidate.py、query.py、Litex 与棋谱树各自负责什么。
+- 解释为什么 2—4 个稀疏编辑加精确全盘码足以替代生产环境中的 全盘冗余逐项比较。
+
+先读接近正常走子的封面
+每手查询先建立本次用到的格名别名，再检查 by def $move(e2, e4) 与 by def $result(ongoing/check/checkmate/stalemate)。result_witness 继续记录将军者数量与合法应对数。
+
+候选构造、证书核验与提交必须分开
+前端提交 from/to/promotion；candidate.py 机械构造候选 Position；query.py 从规则参数生成 Litex 义务；只有全部语句成功，应用层才把候选加入棋谱树。
+
+棋盘后继只陈述真正变化的格子
+普通着改变两格，吃过路兵改变三格，易位改变四格。每个编辑给出 (after-before)×16^index 的贡献；精确、可逆的全盘码等式排除任何未登记改动。
+
+本文件是 Litex 原生教材的可验证回退层。网页上的棋盘、局面实验、源码查看器和残局训练
+由无 iframe 的 Chess Web Component 挂载到同一个教材路由中；下面的语句仍可由 Litex
+项目运行器独立检查，因此即使交互扩展未加载，本章也不是一张纯静态网页。
+"""
+
+# 本章的最小可执行检查。完整局面证书由交互扩展的后端按每一手棋生成。
+by def $rules::move(12, 28)
+by def $rules::promotion_choice(0)
+by def $rules::result(0)
+by def $rules::result_witness(0, 0, 20)

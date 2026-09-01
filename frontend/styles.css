@@ -312,7 +312,7 @@ pre { max-height: 330px; overflow: auto; white-space: pre-wrap; word-break: brea
   .piece { font-size: 11vw; }
 }
 
-/* v0.8.0 — auditable Litex source viewer */
+/* Auditable Litex source viewer */
 .formal-code-panel { overflow: hidden; }
 .formal-code-heading { align-items: center; }
 .compact-button { padding: 8px 10px; font-size: 11px; }

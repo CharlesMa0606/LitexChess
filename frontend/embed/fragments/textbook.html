@@ -1,0 +1,174 @@
+<div class="litex-chess-textbook-root">
+  <div class="embedded-textbook-scaffold" aria-hidden="true">
+    <nav id="chapterNav"></nav>
+  </div>
+  <div class="embedded-textbook-runtime">
+    <span class="book-runtime-pill" id="runtimePill"><span></span><b id="runtimeText">读取 Litex 状态…</b></span>
+    <a class="embedded-workbench-link" data-litex-chess-route="workbench" href="/textbook/Chess/workbench">进入棋局工作台</a>
+  </div>
+  <main class="book-main">
+<div class="book-breadcrumb">
+<span>Textbooks</span><i>/</i><span>Chess</span><i>/</i><strong id="breadcrumbChapter">加载中…</strong>
+</div>
+<section class="chapter-hero">
+<div class="chapter-title-wrap">
+<div class="chapter-kicker" id="chapterKicker">CHAPTER</div>
+<h1 id="chapterTitle">正在载入教材</h1>
+<p id="chapterSummary">正在读取中文注释镜像、局面实验与 Litex 状态。</p>
+</div>
+<div class="chapter-controls">
+<button class="run-all-button" id="runAllButton" type="button">
+<span class="run-icon">▶</span><span>编译整册</span>
+</button>
+<span class="control-chip">中文</span>
+<span class="control-chip">完整门禁</span>
+<button class="reset-button" id="resetButton" type="button">↻ 重置结果</button>
+</div>
+</section>
+<details class="artifact-panel" open="">
+<summary>
+<span>
+<strong>Verification artifacts</strong>
+<small id="artifactCaption">检查教材镜像、章节标记与 Litex 编译结果</small>
+</span>
+<span class="artifact-status neutral" id="artifactStatus">尚未运行</span>
+</summary>
+<div class="artifact-grid" id="artifactGrid">
+<div><span>核心镜像</span><strong id="mirrorStatus">读取中</strong></div>
+<div><span>章节索引</span><strong id="markerStatus">读取中</strong></div>
+<div><span>局面实验</span><strong id="labStatus">读取中</strong></div>
+<div><span>Litex 语句 / 耗时</span><strong id="statementStatus">—</strong><small id="elapsedStatus">—</small></div>
+</div>
+<pre class="artifact-output" hidden="" id="artifactOutput"></pre>
+</details>
+<article class="chapter-article">
+<div class="intro-rule"></div>
+<section class="lesson-section">
+<h2>本章学习目标</h2>
+<div class="goal-grid" id="chapterGoals"></div>
+</section>
+<section class="lesson-section narrative-section" id="lessonNarrativeSection">
+<div class="section-heading-row">
+<div>
+<h2>先理解规则，再读形式化定义</h2>
+<p>每一章先从完整局面、历史状态与反例出发，再回到 Litex 谓词。</p>
+</div>
+</div>
+<div class="lesson-narrative" id="lessonNarrative"></div>
+</section>
+<section class="lesson-section state-fields-section" hidden="" id="stateFieldsSection">
+<div class="section-heading-row">
+<div>
+<h2>局面状态字段</h2>
+<p>棋子摆放只是 Position 的一部分；易位权与过路兵目标承担历史记忆。</p>
+</div>
+</div>
+<div class="state-field-grid" id="stateFieldGrid"></div>
+</section>
+<section class="lesson-section workflow-section" hidden="" id="workflowSection">
+<div class="section-heading-row">
+<div>
+<h2>一手棋的五阶段流水线</h2>
+<p>“构造候选”与“接受候选”是两件不同的事。</p>
+</div>
+</div>
+<div class="workflow-track" id="workflowTrack"></div>
+</section>
+<aside class="engine-explanation">
+<div class="engine-explanation-icon">ℒ</div>
+<div>
+<strong>这部分如何进入规则引擎</strong>
+<p id="engineNote"></p>
+</div>
+</aside>
+<section class="lesson-section board-labs-section" id="boardLabsSection">
+<div class="section-heading-row">
+<div>
+<h2>局面实验室：只操作指定棋子</h2>
+<p>点击迷你棋盘上的候选目标，或使用走法按钮。系统会展示机械候选、独立期望、FEN 更新、2—4 个稀疏编辑、精确全盘码、王安全与最终提交/回滚。</p>
+</div>
+<span class="full-gate-badge" id="fullGateBadge">完整 Litex 落子门禁</span>
+</div>
+<div class="board-lab-grid" id="boardLabGrid"></div>
+</section>
+<section class="lesson-section status-labs-section" hidden="" id="statusLabsSection">
+<div class="section-heading-row">
+<div>
+<h2>局面状态实验：将军、将死、逼和与死局</h2>
+<p>系统从实际棋子出发生成精确候选并筛除暴露本方王的走法；状态结论来自“是否受将”与“合法着集合是否为空”的组合。工作台提交着法仍必须经过完整 Litex 门禁。</p>
+</div>
+<span class="full-gate-badge">精确有限候选 · 可选 Litex 审计</span>
+</div>
+<div class="status-lab-grid" id="statusLabGrid"></div>
+</section>
+<section class="lesson-section history-labs-section" hidden="" id="historyLabsSection">
+<div class="section-heading-row">
+<div>
+<h2>历史状态实验：重复局面与回合计数</h2>
+<p>逐手运行完整门禁，并在每个已提交节点记录重复键、出现次数与 halfmove 阈值；“可以申和”与“自动和棋”会分开显示。</p>
+</div>
+<span class="full-gate-badge">历史时间线</span>
+</div>
+<div class="history-lab-grid" id="historyLabGrid"></div>
+</section>
+<section class="lesson-section endgame-labs-section" hidden="" id="endgameLabsSection">
+<div class="section-heading-row">
+<div>
+<h2>互动残局训练：教材内练习与工作台展开</h2>
+<p>每张课程卡使用固定初始 FEN。可以直接在本页选择源格和目标格，也可以把同一局面带到工作台；两种入口共享 Position、状态分析和 Litex 落子门禁。</p>
+</div>
+<span class="full-gate-badge">教材 ↔ 工作台同一规则入口</span>
+</div>
+<div class="endgame-lab-grid" id="endgameLabGrid"></div>
+</section>
+<section class="lesson-section source-section">
+<div class="section-heading-row">
+<div>
+<h2>中文注释 Litex 源码</h2>
+<p>以下内容直接来自 <code>textbook/chess_rules_textbook_cn.lit</code>，保留真实行号；非注释定义与核心规则逐行同步。</p>
+</div>
+<span class="source-range" id="sourceRange">Source lines —</span>
+</div>
+<div class="source-workbench">
+<div aria-label="本章 Litex 源码" class="source-editor" id="sourceEditor"></div>
+<div class="source-result" id="sourceResult">
+<div class="source-result-empty">
+<span>✓</span>
+<p>选择“编译整册”，即可用随包 Litex 编译教材，并核对核心定义镜像。</p>
+</div>
+</div>
+</div>
+</section>
+<section class="lesson-section examples-section">
+<div class="section-heading-row">
+<div>
+<h2>定义级显微镜（辅助）</h2>
+<p>这里的单句 <code>by def</code> 只帮助观察一个谓词的局部含义，不等同于完整落子验证。规则学习以上方局面实验为主。</p>
+</div>
+<span class="whitelist-badge">固定白名单查询</span>
+</div>
+<div class="example-grid" id="exampleGrid"></div>
+</section>
+<section class="lesson-section boundary-section">
+<h2>可信边界：当前版本究竟是谁算了什么</h2>
+<div class="boundary-columns">
+<div>
+<strong>Litex 直接检查</strong>
+<p>具体坐标与棋子编码、选定走子形状、2—4 个稀疏编辑的整数贡献、精确全盘码等式、FEN 元数据相等、给定王/攻击计数满足安全汇总，以及最终零失配合同。</p>
+</div>
+<div>
+<strong>Python 证书编译器计算</strong>
+<p>机械候选后继、形状选择、滑行路径与阻挡数、独立期望后继、历史字段更新，以及当前版本的攻击扫描与攻击者计数。它们仍属于可信计算基。</p>
+</div>
+</div>
+<p class="boundary-conclusion">因此，本项目不是“Python 只传一手棋，Litex 自动从抽象棋规推出一切”；准确说法是：Python 把具体局面编译为可审计证书，Litex 对证书中的具体事实做 fail-closed 核验。</p>
+</section>
+<footer class="chapter-pagination">
+<button id="previousChapter" type="button">← 上一章</button>
+<span id="chapterProgress">—</span>
+<button id="nextChapter" type="button">下一章 →</button>
+</footer>
+</article>
+</main>
+  <div class="book-toast" id="bookToast" role="status"></div>
+</div>

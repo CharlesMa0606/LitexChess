@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chess — Litex Textbooks</title>
+  <link rel="stylesheet" href="/extensions/chess/site/site.css" />
+</head>
+<body>
+  <header class="litex-site-header">
+    <a class="site-brand" href="/textbook/Chess" data-site-route>
+      <span class="site-logo" aria-hidden="true">♔</span>
+      <span class="site-brand-copy"><strong>Litex</strong><small>Where mathematics verifies itself</small></span>
+    </a>
+    <nav class="site-primary-nav" aria-label="Litex 主导航">
+      <a class="active" href="/textbook/Chess" data-site-route>Textbooks</a>
+      <a href="/documents">Documents</a>
+      <a href="/learn">Learn</a>
+      <a href="/playground">Playground</a>
+    </nav>
+    <div class="site-actions">
+      <a class="workbench-shortcut" href="/textbook/Chess/workbench" data-site-route>棋局工作台</a>
+      <span class="site-runtime" id="siteRuntime"><i></i><b>连接 Litex…</b></span>
+    </div>
+  </header>
+
+  <div class="litex-site-layout">
+    <aside class="litex-site-sidebar" aria-label="教材目录">
+      <div class="sidebar-title">
+        <span aria-hidden="true">▣</span>
+        <div><strong>Textbooks</strong><small>Chess · 中文可执行教材</small></div>
+      </div>
+      <nav id="siteChapterNav" class="site-chapter-nav"></nav>
+      <div class="site-extension-note">
+        <strong>Native Litex extension</strong>
+        <p>本页由 Litex 全局壳层承载，国际象棋模块以 Web Component 直接挂载；没有 iframe，也没有第二套应用导航。</p>
+      </div>
+    </aside>
+
+    <main class="litex-site-main" id="siteMain" tabindex="-1">
+      <div class="site-loading">正在加载国际象棋教材扩展…</div>
+    </main>
+  </div>
+
+  <script type="module" src="/extensions/chess/site/site.js"></script>
+</body>
+</html>

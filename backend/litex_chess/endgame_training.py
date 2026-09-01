@@ -12,6 +12,7 @@ import threading
 import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any
+from urllib.parse import urlencode
 
 from .fast_state import FastPosition, Move as FastMove, analyze_fen
 from .game_status import PositionStatusAnalyzer
@@ -33,7 +34,7 @@ class EndgameLesson:
 
     def json(self) -> dict[str, Any]:
         payload = asdict(self)
-        payload["workbench_url"] = f"/?fen={self.fen}&lesson={self.lesson_id}&return=/textbook"
+        payload["workbench_url"] = "/textbook/Chess/workbench?" + urlencode({"fen": self.fen, "lesson": self.lesson_id, "return": "/textbook/Chess/interactive-endgames"})
         return payload
 
 
@@ -217,7 +218,7 @@ class EndgameTrainer:
             "finished": finished,
             "result": result,
             "last_receipts": last_receipts or [],
-            "workbench_url": f"/?fen={session.position.fen}&lesson={session.lesson.lesson_id}&return=/textbook",
+            "workbench_url": "/textbook/Chess/workbench?" + urlencode({"fen": session.position.fen, "lesson": session.lesson.lesson_id, "return": "/textbook/Chess/interactive-endgames"}),
         }
 
     def list_lessons(self) -> list[dict[str, Any]]:

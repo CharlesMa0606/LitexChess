@@ -1,0 +1,117 @@
+{
+  "id": "Chess",
+  "title": "International Chess Rules",
+  "title_zh": "Litex 国际象棋规则教材",
+  "language": "zh-CN",
+  "default_chapter": "position-state",
+  "interactive_element": "litex-chess-textbook",
+  "workbench_element": "litex-chess-workbench",
+  "route_base": "/textbook/Chess",
+  "chapters": [
+    {
+      "number": 1,
+      "slug": "position-state",
+      "title": "完整局面：棋盘、轮次、权利与 FEN",
+      "file": "chapter01-position-state.lit",
+      "route": "/textbook/Chess/position-state"
+    },
+    {
+      "number": 2,
+      "slug": "move-pipeline",
+      "title": "一手棋的可读记录、完整证书与稀疏后继",
+      "file": "chapter02-move-pipeline.lit",
+      "route": "/textbook/Chess/move-pipeline"
+    },
+    {
+      "number": 3,
+      "slug": "sliding-pieces",
+      "title": "车、象与后：射线、阻挡和目标占用",
+      "file": "chapter03-sliding-pieces.lit",
+      "route": "/textbook/Chess/sliding-pieces"
+    },
+    {
+      "number": 4,
+      "slug": "knight-king",
+      "title": "马与王：跳跃、相邻格与受攻击目标",
+      "file": "chapter04-knight-king.lit",
+      "route": "/textbook/Chess/knight-king"
+    },
+    {
+      "number": 5,
+      "slug": "ordinary-pawns",
+      "title": "兵的方向、双步、斜吃与阻挡",
+      "file": "chapter05-ordinary-pawns.lit",
+      "route": "/textbook/Chess/ordinary-pawns"
+    },
+    {
+      "number": 6,
+      "slug": "special-moves",
+      "title": "升变、吃过路兵与王车易位",
+      "file": "chapter06-special-moves.lit",
+      "route": "/textbook/Chess/special-moves"
+    },
+    {
+      "number": 7,
+      "slug": "check-and-responses",
+      "title": "将军与三类应将：移王、吃子、挡线",
+      "file": "chapter07-check-and-responses.lit",
+      "route": "/textbook/Chess/check-and-responses"
+    },
+    {
+      "number": 8,
+      "slug": "pins",
+      "title": "绝对牵制与相对牵制：规则和战术的边界",
+      "file": "chapter08-pins.lit",
+      "route": "/textbook/Chess/pins"
+    },
+    {
+      "number": 9,
+      "slug": "discovered-double-check",
+      "title": "闪击、闪将与双将",
+      "file": "chapter09-discovered-double-check.lit",
+      "route": "/textbook/Chess/discovered-double-check"
+    },
+    {
+      "number": 10,
+      "slug": "mate-stalemate",
+      "title": "将死、逼和、死局与合法着集合",
+      "file": "chapter10-mate-stalemate.lit",
+      "route": "/textbook/Chess/mate-stalemate"
+    },
+    {
+      "number": 11,
+      "slug": "material-dead-positions",
+      "title": "单马、单象、双马与“不能强杀/死局”的区别",
+      "file": "chapter11-material-dead-positions.lit",
+      "route": "/textbook/Chess/material-dead-positions"
+    },
+    {
+      "number": 12,
+      "slug": "draw-history",
+      "title": "重复局面、五十/七十五回合与棋局事件",
+      "file": "chapter12-draw-history.lit",
+      "route": "/textbook/Chess/draw-history"
+    },
+    {
+      "number": 13,
+      "slug": "basic-mating-methods",
+      "title": "王车与王后杀王：限制、靠王与最后一将",
+      "file": "chapter13-basic-mating-methods.lit",
+      "route": "/textbook/Chess/basic-mating-methods"
+    },
+    {
+      "number": 14,
+      "slug": "interactive-endgames",
+      "title": "互动基础残局训练",
+      "file": "chapter14-interactive-endgames.lit",
+      "route": "/textbook/Chess/interactive-endgames"
+    },
+    {
+      "number": 15,
+      "slug": "certificate-audit",
+      "title": "Agent 走法记录、完整证书与可信边界",
+      "file": "chapter15-certificate-audit.lit",
+      "route": "/textbook/Chess/certificate-audit"
+    }
+  ]
+}

@@ -329,7 +329,7 @@ code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, m
   .source-line-number { padding-right: 8px; }
 }
 
-/* v0.8.0 — position-first, visual rule textbook */
+/* Position-first visual rule textbook */
 .chapter-article { max-width: 1320px; }
 .artifact-grid small { display: block; margin-top: 3px; color: #929791; font-size: 9px; }
 .full-gate-badge {
@@ -747,7 +747,7 @@ code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, m
   .artifact-grid { grid-template-columns: 1fr 1fr; }
 }
 
-/* v0.8.0 — visible formal source, square boards, tactical/status/history lessons */
+/* Visible formal source, square boards, tactical/status/history lessons */
 .chapter-part-heading {
   margin: 15px 10px 5px;
   padding: 8px 3px 5px;

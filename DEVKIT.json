@@ -1,0 +1,8 @@
+{
+  "name": "LitexChessStudio_v0.9_LitexWeb_DevKit",
+  "version": "0.9.0",
+  "transport": "custom-elements+shadow-dom",
+  "iframe": false,
+  "native_textbook": "integration/golitex-overlay/textbooks/Chess",
+  "bundled_verifier": false
+}

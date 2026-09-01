@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "id": "Chess",
+  "title": "International Chess Rules and Formal Verification",
+  "title_zh": "Litex 国际象棋规则教材",
+  "language": "zh-CN",
+  "upstream": {
+    "repository": "litexlang/golitex",
+    "tested_commit": "2e457026928e009344d35f363e721c2540c410b6",
+    "textbook_directory": "textbooks/Chess"
+  },
+  "routes": {
+    "base": "/textbook/Chess",
+    "default": "/textbook/Chess/position-state",
+    "workbench": "/textbook/Chess/workbench",
+    "playground_alias": "/playground/chess"
+  },
+  "assets": {
+    "entry": "/extensions/chess/embed/litex-chess-elements.js",
+    "root": "/extensions/chess/",
+    "source_base": "/textbook-source",
+    "api_base": "/api"
+  },
+  "components": {
+    "chapter": "litex-chess-textbook",
+    "workbench": "litex-chess-workbench",
+    "transport": "shadow-dom-web-components",
+    "iframe": false
+  },
+  "integration": {
+    "host_contract": "/extensions/chess/integration/litex-site/HOST_INTEGRATION_CONTRACT_CN.md",
+    "route_adapter": "/extensions/chess/integration/litex-site/register-chess.js",
+    "requires_single_host_shell": true,
+    "iframe": false
+  },
+  "chapters": [
+    {
+      "number": 1,
+      "slug": "position-state",
+      "title": "完整局面：棋盘、轮次、权利与 FEN",
+      "part": "I",
+      "part_title": "第一编　局面、状态与可读执行链",
+      "route": "/textbook/Chess/position-state"
+    },
+    {
+      "number": 2,
+      "slug": "move-pipeline",
+      "title": "一手棋的可读记录、完整证书与稀疏后继",
+      "part": "I",
+      "part_title": "第一编　局面、状态与可读执行链",
+      "route": "/textbook/Chess/move-pipeline"
+    },
+    {
+      "number": 3,
+      "slug": "sliding-pieces",
+      "title": "车、象与后：射线、阻挡和目标占用",
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "route": "/textbook/Chess/sliding-pieces"
+    },
+    {
+      "number": 4,
+      "slug": "knight-king",
+      "title": "马与王：跳跃、相邻格与受攻击目标",
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "route": "/textbook/Chess/knight-king"
+    },
+    {
+      "number": 5,
+      "slug": "ordinary-pawns",
+      "title": "兵的方向、双步、斜吃与阻挡",
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "route": "/textbook/Chess/ordinary-pawns"
+    },
+    {
+      "number": 6,
+      "slug": "special-moves",
+      "title": "升变、吃过路兵与王车易位",
+      "part": "II",
+      "part_title": "第二编　棋子走法与特殊规则",
+      "route": "/textbook/Chess/special-moves"
+    },
+    {
+      "number": 7,
+      "slug": "check-and-responses",
+      "title": "将军与三类应将：移王、吃子、挡线",
+      "part": "III",
+      "part_title": "第三编　王安全与战术关系",
+      "route": "/textbook/Chess/check-and-responses"
+    },
+    {
+      "number": 8,
+      "slug": "pins",
+      "title": "绝对牵制与相对牵制：规则和战术的边界",
+      "part": "III",
+      "part_title": "第三编　王安全与战术关系",
+      "route": "/textbook/Chess/pins"
+    },
+    {
+      "number": 9,
+      "slug": "discovered-double-check",
+      "title": "闪击、闪将与双将",
+      "part": "III",
+      "part_title": "第三编　王安全与战术关系",
+      "route": "/textbook/Chess/discovered-double-check"
+    },
+    {
+      "number": 10,
+      "slug": "mate-stalemate",
+      "title": "将死、逼和、死局与合法着集合",
+      "part": "IV",
+      "part_title": "第四编　终局、和棋与历史",
+      "route": "/textbook/Chess/mate-stalemate"
+    },
+    {
+      "number": 11,
+      "slug": "material-dead-positions",
+      "title": "单马、单象、双马与“不能强杀/死局”的区别",
+      "part": "IV",
+      "part_title": "第四编　终局、和棋与历史",
+      "route": "/textbook/Chess/material-dead-positions"
+    },
+    {
+      "number": 12,
+      "slug": "draw-history",
+      "title": "重复局面、五十/七十五回合与棋局事件",
+      "part": "IV",
+      "part_title": "第四编　终局、和棋与历史",
+      "route": "/textbook/Chess/draw-history"
+    },
+    {
+      "number": 13,
+      "slug": "basic-mating-methods",
+      "title": "王车与王后杀王：限制、靠王与最后一将",
+      "part": "V",
+      "part_title": "第五编　基础残局方法与互动训练",
+      "route": "/textbook/Chess/basic-mating-methods"
+    },
+    {
+      "number": 14,
+      "slug": "interactive-endgames",
+      "title": "互动基础残局训练",
+      "part": "V",
+      "part_title": "第五编　基础残局方法与互动训练",
+      "route": "/textbook/Chess/interactive-endgames"
+    },
+    {
+      "number": 15,
+      "slug": "certificate-audit",
+      "title": "Agent 走法记录、完整证书与可信边界",
+      "part": "VI",
+      "part_title": "第六编　形式化证书与可信边界",
+      "route": "/textbook/Chess/certificate-audit"
+    }
+  ]
+}

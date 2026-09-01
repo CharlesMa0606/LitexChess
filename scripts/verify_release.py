@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cross-platform release gate for Litex Chess Studio v0.8.
+"""Cross-platform release gate for Litex Chess Studio v0.9.
 
 The gate is intentionally explicit and bounded.  It checks the generated
 textbook mirror, Python/JavaScript syntax, unit and semantic tests, HTTP smoke
@@ -134,19 +134,30 @@ def main() -> int:
 
     py = sys.executable
     gates = [
-        Gate("textbook_sync", "教材镜像与核心规则同步", [py, "scripts/sync_textbook_core.py", "--check"], {0}, 60),
-        Gate("python_compile", "Python 源码编译", [py, "-m", "compileall", "-q", "backend", "scripts", "tests"], {0}, 120),
+        Gate("textbook_sync", "教材镜像、原生覆盖层与核心规则同步", [py, "scripts/sync_textbook_core.py", "--check"], {0}, 60),
+        Gate("integration_sync", "章节目录、网站 manifest 与原生教材配置同步", [py, "scripts/sync_web_integration.py", "--check"], {0}, 60),
+        Gate("python_compile", "Python 源码编译", [py, "-m", "compileall", "-q", "backend", "scripts", "tests", "integration"], {0}, 120),
         Gate("python_tests", "完整 Python 测试", [py, "-m", "pytest", "-q", "backend/tests", "tests"], {0}, 300),
-        Gate("frontend_contract", "工作台与十五章教材静态契约", [py, "scripts/verify_frontend_contract.py"], {0}, 120),
-        Gate("semantic_gate", "v0.8 语义门禁", [py, "scripts/verify_v08_semantics.py"], {0}, 180),
+        Gate("frontend_contract", "Litex 站点嵌入、工作台与十五章教材静态契约", [py, "scripts/verify_frontend_contract.py"], {0}, 120),
+        Gate("web_integration", "无 iframe Web Component 与原生教材覆盖层", [py, "scripts/verify_web_integration.py"], {0}, 240),
+        Gate("semantic_gate", "v0.9 语义门禁", [py, "scripts/verify_v09_semantics.py"], {0}, 180),
         Gate("api_smoke", "工作台、教材、PGN 与终局 API 烟雾测试", [py, "scripts/api_smoke.py"], {0}, 300),
         Gate("textbook_examples", "全部固定教材例与局面实验", [py, "scripts/verify_textbook.py"], {0}, 600),
     ]
 
     node = shutil.which("node")
     if node:
-        for name in ("app", "notation", "textbook"):
-            source = f"frontend/{name}.js"
+        javascript_sources = {
+            "app": "frontend/app.js",
+            "notation": "frontend/notation.js",
+            "textbook": "frontend/textbook.js",
+            "workbench_controller": "frontend/controllers/workbench.js",
+            "textbook_controller": "frontend/controllers/textbook.js",
+            "custom_elements": "frontend/embed/litex-chess-elements.js",
+            "site_host": "frontend/site/site.js",
+            "site_adapter": "integration/litex-site/register-chess.js",
+        }
+        for name, source in javascript_sources.items():
             if (ROOT / source).is_file():
                 gates.append(Gate(f"js_{name}", f"{source} 语法", [node, "--check", source], {0}, 60))
         gates.append(Gate("notation_model", "棋谱主变与括号变例模型", [node, "scripts/verify_notation.js"], {0}, 60))
@@ -157,6 +168,7 @@ def main() -> int:
                 Gate("litex_version", "Litex 版本", [str(litex), "-version"], {0}, 60),
                 Gate("litex_kernel", "生产规则内核编译", [str(litex), "-compact", "-runner", "-f", "formal/chess_rules.lit"], {0}, 180),
                 Gate("litex_textbook", "中文教材 Litex 编译", [str(litex), "-compact", "-runner", "-f", "textbook/chess_rules_textbook_cn.lit"], {0}, 180),
+                Gate("litex_native_chess_book", "golitex 原生 textbooks/Chess 覆盖层编译", [str(litex), "-compact", "-runner", "-r", "integration/golitex-overlay/textbooks/Chess"], {0}, 240),
                 Gate("litex_research_contract", "研究性证书契约编译", [str(litex), "-compact", "-runner", "-f", "research/formal/certificate_contract.lit"], {0}, 120),
                 Gate("litex_research_blueprint", "研究性全状态蓝图编译", [str(litex), "-compact", "-runner", "-f", "research/formal/chess_specification_full.lit"], {0}, 120),
                 Gate("legal_e2e4", "合法 e2e4", cli_move("e2e4"), {0}, 120),
@@ -173,11 +185,13 @@ def main() -> int:
     # session and produces the largest diagnostic output.
     first_phase_names = {
         "textbook_sync",
+        "integration_sync",
         "python_compile",
         "python_tests",
         "frontend_contract",
         "semantic_gate",
         "api_smoke",
+        "web_integration",
     }
     first_phase = [g for g in gates if g.name in first_phase_names and g.status == "NOT RUN"]
     textbook_phase = [g for g in gates if g.name == "textbook_examples" and g.status == "NOT RUN"]
@@ -205,12 +219,13 @@ def main() -> int:
     overall = all((not gate.required) or gate.status == "PASS" for gate in gates)
     now = dt.datetime.now(dt.timezone.utc).isoformat()
     report_lines = [
-        "# Litex Chess Studio v0.8 验证报告",
+        "# Litex Chess Studio v0.9 验证报告",
         "",
         f"- 生成时间：`{now}`",
         f"- 总体结果：**{'PASS' if overall else 'FAIL'}**",
         "- 生产棋盘后继：精确稀疏变更证书（2—4 格）",
         "- 运行时规则源：`formal/chess_rules.lit`",
+        "- 默认网页入口：`/textbook/Chess/<chapter>`（Litex 全局壳层 + 无 iframe Web Component）",
         "",
         "| 检查项 | 含义 | 结果 | 退出码 | 秒 |",
         "|---|---|---:|---:|---:|",
@@ -230,7 +245,8 @@ def main() -> int:
             "- 稀疏棋盘后继、FEN 元数据、王安全和最终接受合同；",
             "- 愚人将杀、将死/逼和、重复局面、材料死局和残局训练接口；",
             "- 棋谱主变纵排、旁支横排与括号嵌套；",
-            "- 15 章教材、19 个定义级例、22 个局面实验（45 条候选）、10 个状态实验和 5 个历史实验。",
+            "- 15 章教材、19 个定义级例、22 个局面实验（45 条候选）、10 个状态实验和 5 个历史实验；",
+            "- `textbooks/Chess` 原生 Litex 覆盖层与无 iframe 自定义元素集成。",
             "",
             "逐项原始输出位于 `verification/generated/`。",
         ]

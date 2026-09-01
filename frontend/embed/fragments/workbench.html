@@ -1,0 +1,124 @@
+<div class="litex-chess-workbench-root">
+  <section class="embedded-workbench-bar" aria-label="国际象棋工作台上下文">
+    <div>
+      <div class="eyebrow">LITEX TEXTBOOK INTERACTIVE MODULE</div>
+      <h1>国际象棋形式化工作台</h1>
+      <p>当前页面直接嵌入 Litex 教材站点；每一步仍由同一 Litex 规则内核核验。</p>
+    </div>
+    <div class="embedded-workbench-actions">
+      <a class="topbar-link" id="textbookLink" href="/textbook/Chess">返回规则教材</a>
+      <div class="engine-pill" id="enginePill">
+        <span class="engine-dot"></span>
+        <span id="engineText">连接 Litex…</span>
+      </div>
+    </div>
+  </section>
+  <main class="workspace">
+<section class="board-column">
+<div class="lesson-context card" hidden="" id="lessonContext">
+<div>
+<div class="eyebrow">TEXTBOOK CONTEXT</div>
+<h2 id="lessonContextTitle">教材局面</h2>
+<p id="lessonContextGoal"></p>
+</div>
+<a class="lesson-context-return" href="/textbook" id="lessonContextReturn">返回教材</a>
+</div>
+<div class="toolbar card">
+<button id="newGameButton">新建标准棋局</button>
+<button class="secondary" id="flipButton">翻转棋盘</button>
+<button class="secondary" id="backButton">上一步</button>
+<button class="secondary" id="forwardButton">主线下一步</button>
+</div>
+<div class="board-shell card">
+<div class="turn-strip">
+<span id="turnLabel">白方行棋</span>
+<span id="nodeLabel">root</span>
+</div>
+<div aria-label="国际象棋棋盘" class="board" id="board"></div>
+</div>
+<div class="fen-card card">
+<label for="fenInput">根局面 FEN</label>
+<div class="inline-form">
+<input id="fenInput" spellcheck="false"/>
+<button id="loadFenButton">载入</button>
+</div>
+<label class="check-row">
+<input id="validateRootCheckbox" type="checkbox"/>
+          同时请求 Litex 证明根局面满足唯一王等结构条件
+        </label>
+</div>
+</section>
+<section class="study-column">
+<div class="card panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">MOVE NOTATION</div>
+<h2>棋谱与变例</h2>
+</div>
+<div class="button-group">
+<button class="secondary" id="importButton">导入 PGN</button>
+<button class="secondary" id="exportButton">导出 PGN</button>
+</div>
+</div>
+<div aria-label="主变与括号变例记谱" class="move-tree" id="moveTree"></div>
+<p class="notation-hint">主变按回合纵向排列；同一局面的第一条旁支横向展开，旁支内部的进一步分叉用括号嵌套。</p>
+</div>
+<div class="card panel receipt-panel">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">PROOF RECEIPT</div>
+<h2>Litex 判定回执</h2>
+</div>
+<span class="receipt-badge neutral" id="receiptBadge">尚未提交</span>
+</div>
+<div class="receipt-summary" id="receiptSummary">
+          拖动棋子后，候选前后局面会被转换成 Litex 证明义务；只有全部语句返回 success 才落子。
+        </div>
+<details id="receiptDetails">
+<summary>查看诊断与形式化查询</summary>
+<pre id="receiptOutput"></pre>
+</details>
+</div>
+<div class="card panel formal-code-panel">
+<div class="panel-heading formal-code-heading">
+<div>
+<div class="eyebrow">LITEX SOURCE VIEWER</div>
+<h2>当前形式化代码</h2>
+</div>
+<button class="secondary compact-button" id="copyFormalButton" type="button">复制代码</button>
+</div>
+<p class="formal-code-intro">“Agent 走法记录”只显示同一真实查询中的 <code>move(e2,e4)</code> 与 <code>result(checkmate)</code> 可读封面；“完整 Litex 证书”继续公开走子形状、稀疏棋盘后继、FEN 元数据、王安全和总合同。</p>
+<div aria-label="Litex 源码类型" class="formal-code-tabs" role="tablist">
+<button aria-selected="true" class="formal-code-tab active" data-source-mode="agent" id="agentSourceTab" role="tab" type="button">Agent 走法记录</button>
+<button aria-selected="false" class="formal-code-tab" data-source-mode="certificate" id="certificateSourceTab" role="tab" type="button">完整 Litex 证书</button>
+<button aria-selected="false" class="formal-code-tab" data-source-mode="kernel" id="kernelSourceTab" role="tab" type="button">固定规则内核</button>
+</div>
+<div class="formal-code-meta" id="formalCodeMeta">尚无本手记录；请落子或选择已有棋谱节点。</div>
+<div aria-label="只读 Litex 源码" class="formal-code-viewer" id="formalCodeViewer"></div>
+</div>
+<div class="card panel trust-panel">
+<div class="eyebrow">FAIL-CLOSED POLICY</div>
+<h2>规则权威边界</h2>
+<p>浏览器只产生候选走法，不包含合法走子表。后端只机械构造候选后继局面。Litex 缺失、超时、unknown、解析失败或证明失败都会拒绝落子，不调用其他棋规引擎兜底。</p>
+</div>
+</section>
+</main>
+  <dialog id="pgnDialog">
+<form class="dialog-card" method="dialog">
+<div class="panel-heading">
+<div>
+<div class="eyebrow">PORTABLE GAME NOTATION</div>
+<h2 id="pgnDialogTitle">PGN</h2>
+</div>
+<button aria-label="关闭" class="icon-button" value="cancel">×</button>
+</div>
+<textarea id="pgnTextarea" spellcheck="false"></textarea>
+<div class="dialog-actions">
+<span id="pgnHint"></span>
+<button class="secondary" value="cancel">取消</button>
+<button id="pgnConfirmButton" value="default">确认</button>
+</div>
+</form>
+</dialog>
+  <div class="toast" id="toast" role="status"></div>
+</div>
